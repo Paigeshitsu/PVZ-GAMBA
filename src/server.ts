@@ -7,6 +7,7 @@ import type { BattleFeatureResult, Board, BonusBuyResult, SpinResult, SymbolId }
 const START_PORT = Number(process.env.PORT ?? 3000);
 const HOST = "127.0.0.1";
 const MAX_PORT_ATTEMPTS = 10;
+const allowPortFallback = process.argv.includes("--fallback-port");
 const rng = new CryptoRng();
 
 const symbolLabels: Record<SymbolId, string> = {
@@ -32,6 +33,16 @@ const symbolLabels: Record<SymbolId, string> = {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+
+    if (request.method === "GET" && url.pathname === "/__health") {
+      sendJson(response, {
+        ok: true,
+        app: "pvz-slot-framework",
+        startedAt: serverStartedAt,
+        pid: process.pid
+      });
+      return;
+    }
 
     if (request.method === "GET" && url.pathname === "/") {
       sendHtml(response, pageHtml());
@@ -73,21 +84,33 @@ const server = createServer(async (request, response) => {
   }
 });
 
-listenWithFallback(START_PORT);
+const serverStartedAt = new Date().toISOString();
 
-function listenWithFallback(port: number, attempt = 1): void {
+listen(START_PORT);
+
+function listen(port: number, attempt = 1): void {
   server.once("error", (error: NodeJS.ErrnoException) => {
-    if (error.code === "EADDRINUSE" && attempt < MAX_PORT_ATTEMPTS) {
+    if (error.code === "EADDRINUSE" && allowPortFallback && attempt < MAX_PORT_ATTEMPTS) {
       console.log(`Port ${port} is already in use. Trying ${port + 1}...`);
-      listenWithFallback(port + 1, attempt + 1);
+      listen(port + 1, attempt + 1);
       return;
     }
 
-    throw error;
+    if (error.code === "EADDRINUSE") {
+      console.error(`Port ${port} is already in use.`);
+      console.error("Close the old dev server or run with a different port, for example:");
+      console.error("  $env:PORT=3001; npm run dev");
+      process.exitCode = 1;
+      return;
+    }
+
+    console.error(error);
+    process.exitCode = 1;
   });
 
   server.listen(port, HOST, () => {
     console.log(`Slot demo running at http://${HOST}:${port}`);
+    console.log(`Health check: http://${HOST}:${port}/__health`);
   });
 }
 
@@ -159,9 +182,24 @@ function serializeBattleFeature(feature: BattleFeatureResult): unknown {
   };
 }
 
-function serializeBoard(board: Board): string[] {
-  // Return spun plants and lane information
-  return board.spinPlants;
+function serializeBoard(board: Board): string[][] {
+  // Return a 5x5 view of symbols.
+  // Rows 0..2 come from deployed "attack" plant reels, rows 3..4 come from lane zombies.
+  // This matches what the browser renderer expects: board[colReel][row].
+  return Array.from({ length: 5 }, (_, reel) => {
+    return Array.from({ length: 5 }, (_, row) => {
+      if (row < 3) {
+        // Show the chosen plant per reel for rows 0..2.
+        // (The demo engine currently stores 5 plants, one per reel.)
+        return board.spinPlants[reel]!;
+      }
+
+      const laneIndex = row; // row 3 -> lane 3, row 4 -> lane 4 (matches previous renderer usage)
+      const lane = board.lanes[laneIndex]!;
+      const zombie = lane.zombies[0]?.symbol;
+      return zombie ?? "EMPTY";
+    });
+  });
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
