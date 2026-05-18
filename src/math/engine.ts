@@ -1,6 +1,6 @@
 import { drawBoard, countSymbols, rerollPlantCells } from "./reels.js";
 import type { BattleFeatureResult, Board, BonusBuyInput, BonusBuyResult, LineWin, SpinEvent, SpinInput, SpinResult, SymbolId, ZombieHit } from "./types.js";
-import { PLANT_ROWS, REELS, ROWS } from "./types.js";
+import { REELS, ROWS, ZOMBIE_COLS } from "./types.js";
 import type { Rng } from "./rng.js";
 import { getSymbol } from "./symbols.js";
 import { BONUS_BUY_COST_MULTIPLIER, BONUS_BUY_FREE_SPINS, BONUS_TRIGGER_COUNT, FIVE_OF_A_KIND_PAYTABLE, validateBaseBet } from "./config.js";
@@ -198,17 +198,17 @@ function hasSymbol(board: Board, symbol: SymbolId): boolean {
 function resolveZombies(board: Board, instantKill: boolean): ZombieHit[] {
   const hits: ZombieHit[] = [];
 
-  for (let reel = 0; reel < REELS; reel += 1) {
-    for (let row = PLANT_ROWS; row < ROWS; row += 1) {
-      const zombie = getSymbol(board[reel]![row]!.symbol);
+  for (let zombieCol = 0; zombieCol < ZOMBIE_COLS; zombieCol += 1) {
+    for (let zombieRow = 0; zombieRow < ROWS; zombieRow += 1) {
+      const zombie = getSymbol(board[zombieCol]![zombieRow]!.symbol);
       if (zombie.kind !== "zombie") {
         continue;
       }
 
       const multiplier = zombie.multiplier ?? 0;
-      const damageTaken = instantKill ? multiplier : laneDamage(board, reel);
+      const damageTaken = instantKill ? multiplier : laneDamage(board, zombieRow);
       hits.push({
-        position: { reel, row },
+        position: { reel: zombieCol, row: zombieRow },
         symbol: zombie.id,
         multiplier,
         damageTaken,
@@ -220,28 +220,21 @@ function resolveZombies(board: Board, instantKill: boolean): ZombieHit[] {
   return hits;
 }
 
-function laneDamage(board: Board, reel: number): number {
+function laneDamage(board: Board, zombieRow: number): number {
   let damage = 0;
-
-  for (let row = 0; row < PLANT_ROWS; row += 1) {
-    damage += getSymbol(board[reel]![row]!.symbol).damage ?? 0;
+  for (let plantCol = ZOMBIE_COLS; plantCol < REELS; plantCol += 1) {
+    damage += getSymbol(board[plantCol]![zombieRow]!.symbol).damage ?? 0;
   }
-
-  const leftSplash = reel > 0 ? splashDamage(board, reel - 1) : 0;
-  const rightSplash = reel < REELS - 1 ? splashDamage(board, reel + 1) : 0;
-
-  return damage + leftSplash + rightSplash;
+  return damage;
 }
 
-function splashDamage(board: Board, reel: number): number {
+function splashDamage(board: Board, row: number): number {
   let damage = 0;
-
-  for (let row = 0; row < PLANT_ROWS; row += 1) {
-    const symbol = board[reel]![row]!.symbol;
+  for (let plantCol = ZOMBIE_COLS; plantCol < REELS; plantCol += 1) {
+    const symbol = board[plantCol]![row]!.symbol;
     if (symbol === "WATERMELON" || symbol === "CHERRY") {
       damage += Math.floor((getSymbol(symbol).damage ?? 0) / 2);
     }
   }
-
   return damage;
 }

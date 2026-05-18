@@ -1,5 +1,5 @@
 import type { Board, Cell, SymbolId } from "./types.js";
-import { PLANT_ROWS, REELS, ROWS } from "./types.js";
+import { REELS, ROWS, ZOMBIE_COLS } from "./types.js";
 import type { Rng, WeightedItem } from "./rng.js";
 
 const plantLayerWeights: WeightedItem<SymbolId>[] = [
@@ -27,7 +27,8 @@ const zombieLayerWeights: WeightedItem<SymbolId>[] = [
 export function drawBoard(rng: Rng): Board {
   return Array.from({ length: REELS }, (_, reel) =>
     Array.from({ length: ROWS }, (_, row): Cell => {
-      const weights = row < PLANT_ROWS ? plantLayerWeights : zombieLayerWeights;
+      const isZombieLayer = reel < ZOMBIE_COLS;
+      const weights = isZombieLayer ? zombieLayerWeights : plantLayerWeights;
       return { symbol: rng.pickWeighted(weights) };
     })
   );
@@ -42,8 +43,8 @@ export function countSymbols(board: Board, symbol: SymbolId): number {
 }
 
 export function rerollPlantCells(board: Board, rng: Rng, predicate: (symbol: SymbolId) => boolean): void {
-  for (let reel = 0; reel < REELS; reel += 1) {
-    for (let row = 0; row < PLANT_ROWS; row += 1) {
+  for (let reel = ZOMBIE_COLS; reel < REELS; reel += 1) {
+    for (let row = 0; row < ROWS; row += 1) {
       if (predicate(board[reel]![row]!.symbol)) {
         board[reel]![row] = { symbol: rng.pickWeighted(plantLayerWeights) };
       }

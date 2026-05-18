@@ -1,6 +1,6 @@
 export const REELS = 5;
 export const ROWS = 5;
-export const PLANT_ROWS = 3;
+export const ZOMBIE_COLS = 2;
 
 export type Position = {
   reel: number;

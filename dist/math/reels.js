@@ -27,7 +27,8 @@ const zombieLayerWeights = [
 ];
 function drawBoard(rng) {
     return Array.from({ length: types_js_1.REELS }, (_, reel) => Array.from({ length: types_js_1.ROWS }, (_, row) => {
-        const weights = row < types_js_1.PLANT_ROWS ? plantLayerWeights : zombieLayerWeights;
+        const isZombieLayer = reel < types_js_1.ZOMBIE_COLS;
+        const weights = isZombieLayer ? zombieLayerWeights : plantLayerWeights;
         return { symbol: rng.pickWeighted(weights) };
     }));
 }
@@ -38,8 +39,8 @@ function countSymbols(board, symbol) {
     return board.flat().filter((cell) => cell.symbol === symbol).length;
 }
 function rerollPlantCells(board, rng, predicate) {
-    for (let reel = 0; reel < types_js_1.REELS; reel += 1) {
-        for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
+    for (let reel = types_js_1.ZOMBIE_COLS; reel < types_js_1.REELS; reel += 1) {
+        for (let row = 0; row < types_js_1.ROWS; row += 1) {
             if (predicate(board[reel][row].symbol)) {
                 board[reel][row] = { symbol: rng.pickWeighted(plantLayerWeights) };
             }
