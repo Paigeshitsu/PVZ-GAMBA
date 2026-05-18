@@ -168,8 +168,11 @@ function serializeBoard(board) {
                 // (The demo engine currently stores 5 plants, one per reel.)
                 return board.spinPlants[reel];
             }
-            const laneIndex = row; // row 3 -> lane 3, row 4 -> lane 4 (matches previous renderer usage)
+            // Browser zombie section expects rows 3..4 to correspond to lane indexes 0..1.
+            // This keeps the zombie container visually paired with the plants.
+            const laneIndex = row - 3; // row 3 -> lane 0, row 4 -> lane 1
             const lane = board.lanes[laneIndex];
+            // Use first zombie target symbol if present
             const zombie = lane.zombies[0]?.symbol;
             return zombie ?? "EMPTY";
         });
