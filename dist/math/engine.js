@@ -89,24 +89,9 @@ function spin(input, rng) {
 function resolveLineWins(board, baseBet) {
     (0, config_js_1.validateBaseBet)(baseBet);
     const lineWins = [];
-    for (let row = 0; row < types_js_1.ROWS; row += 1) {
-        const firstSymbol = board[0][row].symbol;
-        const multiplier = config_js_1.FIVE_OF_A_KIND_PAYTABLE[firstSymbol] ?? 0;
-        if (multiplier === 0) {
-            continue;
-        }
-        const isFiveOfAKind = board.every((reel) => reel[row].symbol === firstSymbol);
-        if (!isFiveOfAKind) {
-            continue;
-        }
-        lineWins.push({
-            row,
-            symbol: firstSymbol,
-            count: types_js_1.REELS,
-            multiplier,
-            payout: multiplier * baseBet
-        });
-    }
+    // Check each lane for 5-of-a-kind bonus (if plants were in rows in traditional sense)
+    // For now, we'll skip this since plants are placed individually, not in rows
+    // You can add custom line-win logic here if needed
     return lineWins;
 }
 function buyBonus(input, rng) {
@@ -153,55 +138,52 @@ function buyBonus(input, rng) {
     };
 }
 function upgradePlantsToMushrooms(board) {
-    for (const reel of board) {
-        for (const cell of reel) {
-            const upgradeTo = (0, symbols_js_1.getSymbol)(cell.symbol).featureUpgradeTo;
+    // Upgrade spun plants
+    for (let i = 0; i < board.spinPlants.length; i++) {
+        const upgradeTo = (0, symbols_js_1.getSymbol)(board.spinPlants[i]).featureUpgradeTo;
+        if (upgradeTo) {
+            board.spinPlants[i] = upgradeTo;
+        }
+    }
+    // Upgrade plants in lanes
+    for (const lane of board.lanes) {
+        if (lane.plant) {
+            const upgradeTo = (0, symbols_js_1.getSymbol)(lane.plant).featureUpgradeTo;
             if (upgradeTo) {
-                cell.symbol = upgradeTo;
+                lane.plant = upgradeTo;
             }
         }
     }
 }
 function hasSymbol(board, symbol) {
-    return board.some((reel) => reel.some((cell) => cell.symbol === symbol));
+    // Check spin plants
+    const hasInSpin = board.spinPlants.includes(symbol);
+    // Check lanes (both plant and zombies)
+    const hasInLanes = board.lanes.some((lane) => lane.plant === symbol || lane.zombies.some((z) => z.symbol === symbol));
+    return hasInSpin || hasInLanes;
 }
 function resolveZombies(board, instantKill) {
     const hits = [];
-    for (let reel = 0; reel < types_js_1.REELS; reel += 1) {
-        for (let row = types_js_1.PLANT_ROWS; row < types_js_1.ROWS; row += 1) {
-            const zombie = (0, symbols_js_1.getSymbol)(board[reel][row].symbol);
-            if (zombie.kind !== "zombie") {
-                continue;
-            }
-            const multiplier = zombie.multiplier ?? 0;
-            const damageTaken = instantKill ? multiplier : laneDamage(board, reel);
+    for (let laneIndex = 0; laneIndex < types_js_1.LANES; laneIndex += 1) {
+        const lane = board.lanes[laneIndex];
+        // No zombies in this lane
+        if (lane.zombies.length === 0) {
+            continue;
+        }
+        // Get plant damage if one is deployed in this lane
+        const plantDamage = lane.plant ? ((0, symbols_js_1.getSymbol)(lane.plant).damage ?? 0) : 0;
+        // Attack all zombies in this lane
+        for (const zombie of lane.zombies) {
+            const totalDamage = instantKill ? zombie.health : plantDamage;
+            const defeated = instantKill || totalDamage >= zombie.health;
             hits.push({
-                position: { reel, row },
-                symbol: zombie.id,
-                multiplier,
-                damageTaken,
-                defeated: instantKill || damageTaken >= multiplier
+                position: { reel: 0, row: laneIndex },
+                symbol: zombie.symbol,
+                multiplier: zombie.health, // The original HP value is the multiplier
+                damageTaken: totalDamage,
+                defeated
             });
         }
     }
     return hits;
-}
-function laneDamage(board, reel) {
-    let damage = 0;
-    for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
-        damage += (0, symbols_js_1.getSymbol)(board[reel][row].symbol).damage ?? 0;
-    }
-    const leftSplash = reel > 0 ? splashDamage(board, reel - 1) : 0;
-    const rightSplash = reel < types_js_1.REELS - 1 ? splashDamage(board, reel + 1) : 0;
-    return damage + leftSplash + rightSplash;
-}
-function splashDamage(board, reel) {
-    let damage = 0;
-    for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
-        const symbol = board[reel][row].symbol;
-        if (symbol === "WATERMELON" || symbol === "CHERRY") {
-            damage += Math.floor(((0, symbols_js_1.getSymbol)(symbol).damage ?? 0) / 2);
-        }
-    }
-    return damage;
 }

@@ -159,8 +159,9 @@ function serializeBattleFeature(feature: BattleFeatureResult): unknown {
   };
 }
 
-function serializeBoard(board: Board): string[][] {
-  return board.map((reel) => reel.map((cell) => cell.symbol));
+function serializeBoard(board: Board): string[] {
+  // Return spun plants and lane information
+  return board.spinPlants;
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {

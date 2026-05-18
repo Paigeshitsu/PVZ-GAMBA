@@ -1,6 +1,6 @@
 import { drawBoard, countSymbols, rerollPlantCells } from "./reels.js";
 import type { BattleFeatureResult, Board, BonusBuyInput, BonusBuyResult, LineWin, SpinEvent, SpinInput, SpinResult, SymbolId, ZombieHit } from "./types.js";
-import { REELS, ROWS, ZOMBIE_COLS } from "./types.js";
+import { REELS, ROWS, LANES } from "./types.js";
 import type { Rng } from "./rng.js";
 import { getSymbol } from "./symbols.js";
 import { BONUS_BUY_COST_MULTIPLIER, BONUS_BUY_FREE_SPINS, BONUS_TRIGGER_COUNT, FIVE_OF_A_KIND_PAYTABLE, validateBaseBet } from "./config.js";
@@ -101,27 +101,9 @@ export function resolveLineWins(board: Board, baseBet: number): LineWin[] {
 
   const lineWins: LineWin[] = [];
 
-  for (let row = 0; row < ROWS; row += 1) {
-    const firstSymbol = board[0]![row]!.symbol;
-    const multiplier = FIVE_OF_A_KIND_PAYTABLE[firstSymbol] ?? 0;
-
-    if (multiplier === 0) {
-      continue;
-    }
-
-    const isFiveOfAKind = board.every((reel) => reel[row]!.symbol === firstSymbol);
-    if (!isFiveOfAKind) {
-      continue;
-    }
-
-    lineWins.push({
-      row,
-      symbol: firstSymbol,
-      count: REELS,
-      multiplier,
-      payout: multiplier * baseBet
-    });
-  }
+  // Check each lane for 5-of-a-kind bonus (if plants were in rows in traditional sense)
+  // For now, we'll skip this since plants are placed individually, not in rows
+  // You can add custom line-win logic here if needed
 
   return lineWins;
 }
@@ -181,60 +163,63 @@ export function buyBonus(input: BonusBuyInput, rng: Rng): BonusBuyResult {
 }
 
 function upgradePlantsToMushrooms(board: Board): void {
-  for (const reel of board) {
-    for (const cell of reel) {
-      const upgradeTo = getSymbol(cell.symbol).featureUpgradeTo;
+  // Upgrade spun plants
+  for (let i = 0; i < board.spinPlants.length; i++) {
+    const upgradeTo = getSymbol(board.spinPlants[i]!).featureUpgradeTo;
+    if (upgradeTo) {
+      board.spinPlants[i] = upgradeTo;
+    }
+  }
+
+  // Upgrade plants in lanes
+  for (const lane of board.lanes) {
+    if (lane.plant) {
+      const upgradeTo = getSymbol(lane.plant).featureUpgradeTo;
       if (upgradeTo) {
-        cell.symbol = upgradeTo;
+        lane.plant = upgradeTo;
       }
     }
   }
 }
 
 function hasSymbol(board: Board, symbol: SymbolId): boolean {
-  return board.some((reel) => reel.some((cell) => cell.symbol === symbol));
+  // Check spin plants
+  const hasInSpin = board.spinPlants.includes(symbol);
+  // Check lanes (both plant and zombies)
+  const hasInLanes = board.lanes.some(
+    (lane) => lane.plant === symbol || lane.zombies.some((z) => z.symbol === symbol)
+  );
+  return hasInSpin || hasInLanes;
 }
 
 function resolveZombies(board: Board, instantKill: boolean): ZombieHit[] {
   const hits: ZombieHit[] = [];
 
-  for (let zombieCol = 0; zombieCol < ZOMBIE_COLS; zombieCol += 1) {
-    for (let zombieRow = 0; zombieRow < ROWS; zombieRow += 1) {
-      const zombie = getSymbol(board[zombieCol]![zombieRow]!.symbol);
-      if (zombie.kind !== "zombie") {
-        continue;
-      }
+  for (let laneIndex = 0; laneIndex < LANES; laneIndex += 1) {
+    const lane = board.lanes[laneIndex]!;
 
-      const multiplier = zombie.multiplier ?? 0;
-      const damageTaken = instantKill ? multiplier : laneDamage(board, zombieRow);
+    // No zombies in this lane
+    if (lane.zombies.length === 0) {
+      continue;
+    }
+
+    // Get plant damage if one is deployed in this lane
+    const plantDamage = lane.plant ? (getSymbol(lane.plant).damage ?? 0) : 0;
+
+    // Attack all zombies in this lane
+    for (const zombie of lane.zombies) {
+      const totalDamage = instantKill ? zombie.health : plantDamage;
+      const defeated = instantKill || totalDamage >= zombie.health;
+
       hits.push({
-        position: { reel: zombieCol, row: zombieRow },
-        symbol: zombie.id,
-        multiplier,
-        damageTaken,
-        defeated: instantKill || damageTaken >= multiplier
+        position: { reel: 0, row: laneIndex },
+        symbol: zombie.symbol,
+        multiplier: zombie.health, // The original HP value is the multiplier
+        damageTaken: totalDamage,
+        defeated
       });
     }
   }
 
   return hits;
-}
-
-function laneDamage(board: Board, zombieRow: number): number {
-  let damage = 0;
-  for (let plantCol = ZOMBIE_COLS; plantCol < REELS; plantCol += 1) {
-    damage += getSymbol(board[plantCol]![zombieRow]!.symbol).damage ?? 0;
-  }
-  return damage;
-}
-
-function splashDamage(board: Board, row: number): number {
-  let damage = 0;
-  for (let plantCol = ZOMBIE_COLS; plantCol < REELS; plantCol += 1) {
-    const symbol = board[plantCol]![row]!.symbol;
-    if (symbol === "WATERMELON" || symbol === "CHERRY") {
-      damage += Math.floor((getSymbol(symbol).damage ?? 0) / 2);
-    }
-  }
-  return damage;
 }

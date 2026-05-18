@@ -5,6 +5,7 @@ exports.cloneBoard = cloneBoard;
 exports.countSymbols = countSymbols;
 exports.rerollPlantCells = rerollPlantCells;
 const types_js_1 = require("./types.js");
+const symbols_js_1 = require("./symbols.js");
 const plantLayerWeights = [
     { value: "PEASHOOTER_1", weight: 24 },
     { value: "PEASHOOTER_2", weight: 16 },
@@ -26,24 +27,51 @@ const zombieLayerWeights = [
     { value: "EMPTY", weight: 50 }
 ];
 function drawBoard(rng) {
-    return Array.from({ length: types_js_1.REELS }, (_, reel) => Array.from({ length: types_js_1.ROWS }, (_, row) => {
-        const isZombieLayer = reel < types_js_1.ZOMBIE_COLS;
-        const weights = isZombieLayer ? zombieLayerWeights : plantLayerWeights;
-        return { symbol: rng.pickWeighted(weights) };
-    }));
+    // Spin 5 plants for player to deploy
+    const spinPlants = Array.from({ length: 5 }, () => rng.pickWeighted(plantLayerWeights));
+    // Initialize lanes with zombies (player starts with empty lanes)
+    const lanes = Array.from({ length: types_js_1.LANES }, () => {
+        const zombieSymbol = rng.pickWeighted(zombieLayerWeights);
+        const zombies = zombieSymbol === "EMPTY"
+            ? []
+            : [
+                {
+                    symbol: zombieSymbol,
+                    health: (0, symbols_js_1.getSymbol)(zombieSymbol).multiplier ?? 0
+                }
+            ];
+        return {
+            plant: undefined, // Player will place plants
+            zombies
+        };
+    });
+    return { spinPlants, lanes };
 }
 function cloneBoard(board) {
-    return board.map((reel) => reel.map((cell) => ({ ...cell })));
+    return {
+        spinPlants: [...board.spinPlants],
+        lanes: board.lanes.map((lane) => ({
+            plant: lane.plant,
+            zombies: lane.zombies.map((z) => ({ ...z }))
+        }))
+    };
 }
 function countSymbols(board, symbol) {
-    return board.flat().filter((cell) => cell.symbol === symbol).length;
+    const spinCount = board.spinPlants.filter((s) => s === symbol).length;
+    const laneCount = board.lanes.filter((lane) => lane.plant === symbol || lane.zombies.some((z) => z.symbol === symbol)).length;
+    return spinCount + laneCount;
 }
 function rerollPlantCells(board, rng, predicate) {
-    for (let reel = types_js_1.ZOMBIE_COLS; reel < types_js_1.REELS; reel += 1) {
-        for (let row = 0; row < types_js_1.ROWS; row += 1) {
-            if (predicate(board[reel][row].symbol)) {
-                board[reel][row] = { symbol: rng.pickWeighted(plantLayerWeights) };
-            }
+    // Reroll spin plants
+    for (let i = 0; i < board.spinPlants.length; i++) {
+        if (predicate(board.spinPlants[i])) {
+            board.spinPlants[i] = rng.pickWeighted(plantLayerWeights);
+        }
+    }
+    // Reroll lane plants
+    for (const lane of board.lanes) {
+        if (lane.plant && predicate(lane.plant)) {
+            lane.plant = rng.pickWeighted(plantLayerWeights);
         }
     }
 }

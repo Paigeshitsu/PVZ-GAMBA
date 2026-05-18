@@ -1,10 +1,24 @@
 export const REELS = 5;
 export const ROWS = 5;
-export const ZOMBIE_COLS = 2;
+export const LANES = 5; // 5 lanes where plants and zombies interact
 
 export type Position = {
   reel: number;
   row: number;
+};
+
+// Container for spun plants - player can deploy these to lanes
+export type PlantContainer = {
+  plants: SymbolId[]; // All plants player spun
+};
+
+// Lane with a plant and zombies
+export type Lane = {
+  plant?: SymbolId; // Plant deployed to this lane (optional)
+  zombies: Array<{
+    symbol: SymbolId;
+    health: number; // Current remaining health (equal to multiplier value)
+  }>;
 };
 
 export type SymbolId =
@@ -44,7 +58,10 @@ export type Cell = {
   symbol: SymbolId;
 };
 
-export type Board = Cell[][];
+export type Board = {
+  spinPlants: SymbolId[]; // Plants from the spin (5 plants)
+  lanes: Lane[]; // 5 lanes - player places plants and zombies spawn here
+};
 
 export type SpinMode = "base" | "bonus";
 

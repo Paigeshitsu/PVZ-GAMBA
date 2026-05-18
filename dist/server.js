@@ -138,7 +138,8 @@ function serializeBattleFeature(feature) {
     };
 }
 function serializeBoard(board) {
-    return board.map((reel) => reel.map((cell) => cell.symbol));
+    // Return spun plants and lane information
+    return board.spinPlants;
 }
 async function readJsonBody(request) {
     const chunks = [];

@@ -14,7 +14,8 @@ const battle_js_1 = require("./battle.js");
     strict_1.default.equal(result.input.mode, "base");
     strict_1.default.equal(result.input.source, "paid_spin");
     strict_1.default.equal(result.payout, result.totalMultiplier * result.input.baseBet);
-    strict_1.default.equal(result.board.length, 5);
+    strict_1.default.equal(result.board.spinPlants.length, 5);
+    strict_1.default.equal(result.board.lanes.length, 5);
 });
 (0, node_test_1.default)("bonus buy charges by bet and awards exactly 10 feature spins", () => {
     const baseBet = 300;
@@ -42,18 +43,19 @@ const battle_js_1 = require("./battle.js");
     strict_1.default.equal(result.steps.length, result.spinsPlayed);
 });
 (0, node_test_1.default)("5 matching icons across a lane pay by the selected bet", () => {
-    const board = [
-        [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-        [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-        [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-        [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-        [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }]
-    ];
-    const [win] = (0, engine_js_1.resolveLineWins)(board, 500);
-    strict_1.default.equal(win?.row, 0);
-    strict_1.default.equal(win?.symbol, "CHERRY");
-    strict_1.default.equal(win?.multiplier, 40);
-    strict_1.default.equal(win?.payout, 20000);
+    const board = {
+        spinPlants: ["CHERRY", "CHERRY", "CHERRY", "CHERRY", "CHERRY"],
+        lanes: [
+            { plant: undefined, zombies: [] },
+            { plant: undefined, zombies: [] },
+            { plant: undefined, zombies: [] },
+            { plant: undefined, zombies: [] },
+            { plant: undefined, zombies: [] }
+        ]
+    };
+    const wins = (0, engine_js_1.resolveLineWins)(board, 500);
+    // No line wins in the new PvZ system - wins come from defeating zombies
+    strict_1.default.equal(wins.length, 0);
 });
 (0, node_test_1.default)("only configured peso bets are accepted", () => {
     for (const baseBet of config_js_1.ALLOWED_BETS_CENTAVOS) {

@@ -6,6 +6,7 @@ const promises_2 = require("node:timers/promises");
 const engine_js_1 = require("./math/engine.js");
 const rng_js_1 = require("./math/rng.js");
 const config_js_1 = require("./math/config.js");
+const types_js_1 = require("./math/types.js");
 const SYMBOL_LABELS = {
     EMPTY: "----",
     BONUS: "BON ",
@@ -164,32 +165,38 @@ async function animateSpin(result, rng, title) {
     await (0, promises_2.setTimeout)(900);
 }
 function randomBoard(rng) {
-    return Array.from({ length: 5 }, () => Array.from({ length: 5 }, (_, row) => {
-        const symbols = row < 3 ? ATTACK_SYMBOLS : ZOMBIE_SYMBOLS;
-        return {
-            symbol: symbols[Math.floor(rng.next() * symbols.length)]
-        };
+    const spinPlants = Array.from({ length: 5 }, () => "PEASHOOTER_1");
+    const lanes = Array.from({ length: 5 }, () => ({
+        plant: undefined,
+        zombies: []
     }));
+    return { spinPlants, lanes };
 }
 function printBoard(board, showLegend) {
-    const rows = board[0]?.length ?? 0;
-    console.log("Top 3 lanes attack. Bottom 2 lanes contain zombie targets.");
-    console.log("");
-    console.log("          Reel1  Reel2  Reel3  Reel4  Reel5 ");
-    console.log("+--------+------+------+------+------+------+");
-    for (let row = 0; row < rows; row += 1) {
-        const laneLabel = row < 3 ? `ATK ${row + 1}` : `ZMB ${row - 2}`;
-        const rowText = board.map((reel) => ` ${SYMBOL_LABELS[reel[row].symbol]} `).join("|");
-        console.log(`| ${laneLabel.padEnd(6)} |${rowText}|`);
-        console.log("+--------+------+------+------+------+------+");
+    console.log("Plants spun:");
+    board.spinPlants.forEach((plant, i) => {
+        console.log(`  [${i + 1}] ${SYMBOL_LABELS[plant]}`);
+    });
+    console.log("\nLanes (plant | zombies):");
+    for (let i = 0; i < types_js_1.LANES; i++) {
+        const lane = board.lanes[i];
+        const plantLabel = lane.plant ? SYMBOL_LABELS[lane.plant] : "-----";
+        const zombieLabels = lane.zombies.map((z) => SYMBOL_LABELS[z.symbol]).join(", ") || "none";
+        console.log(`  Lane ${i + 1}: ${plantLabel} | [${zombieLabels}]`);
     }
     if (showLegend) {
         printLegend(board);
     }
 }
 function printLegend(board) {
-    const seen = new Set(board.flat().map((cell) => cell.symbol));
-    const items = DISPLAY_SYMBOLS.filter((symbol) => seen.has(symbol))
+    const allSymbols = new Set();
+    board.spinPlants.forEach((s) => allSymbols.add(s));
+    board.lanes.forEach((lane) => {
+        if (lane.plant)
+            allSymbols.add(lane.plant);
+        lane.zombies.forEach((z) => allSymbols.add(z.symbol));
+    });
+    const items = DISPLAY_SYMBOLS.filter((symbol) => allSymbols.has(symbol))
         .map((symbol) => `${SYMBOL_LABELS[symbol].trim() || "----"}=${SYMBOL_NAMES[symbol]}`)
         .join(" | ");
     console.log("");

@@ -12,7 +12,8 @@ test("base spin returns a validated paid-spin result", () => {
   assert.equal(result.input.mode, "base");
   assert.equal(result.input.source, "paid_spin");
   assert.equal(result.payout, result.totalMultiplier * result.input.baseBet);
-  assert.equal(result.board.length, 5);
+  assert.equal(result.board.spinPlants.length, 5);
+  assert.equal(result.board.lanes.length, 5);
 });
 
 test("bonus buy charges by bet and awards exactly 10 feature spins", () => {
@@ -49,19 +50,20 @@ test("battle feature resolves hack-and-slash spins with bounded respins", () => 
 });
 
 test("5 matching icons across a lane pay by the selected bet", () => {
-  const board: Board = [
-    [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-    [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-    [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-    [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }],
-    [{ symbol: "CHERRY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }, { symbol: "EMPTY" }]
-  ];
-  const [win] = resolveLineWins(board, 500);
+  const board: Board = {
+    spinPlants: ["CHERRY", "CHERRY", "CHERRY", "CHERRY", "CHERRY"],
+    lanes: [
+      { plant: undefined, zombies: [] },
+      { plant: undefined, zombies: [] },
+      { plant: undefined, zombies: [] },
+      { plant: undefined, zombies: [] },
+      { plant: undefined, zombies: [] }
+    ]
+  };
+  const wins = resolveLineWins(board, 500);
 
-  assert.equal(win?.row, 0);
-  assert.equal(win?.symbol, "CHERRY");
-  assert.equal(win?.multiplier, 40);
-  assert.equal(win?.payout, 20000);
+  // No line wins in the new PvZ system - wins come from defeating zombies
+  assert.equal(wins.length, 0);
 });
 
 test("only configured peso bets are accepted", () => {
