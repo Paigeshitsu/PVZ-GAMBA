@@ -1,0 +1,26 @@
+{
+  "name": "pvz-slot-framework",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/stake-game.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node dist/math/engine.test.js",
+    "dev": "npm run build && node dist/server.js",
+    "demo": "npm run dev",
+    "play": "npm run build && node dist/play.js",
+    "simulate": "npm run build && node dist/simulate.js",
+    "stake:simulate": "npm run build && node dist/stake-game.js --slot-engine-run"
+  },
+  "dependencies": {
+    "@slot-engine/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24.15.0"
+  }
+}

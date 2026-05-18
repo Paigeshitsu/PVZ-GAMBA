@@ -1,0 +1,4743 @@
+"use strict";
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+
+// node_modules/@slot-engine/core/dist/index.js
+var require_dist = __commonJS({
+  "node_modules/@slot-engine/core/dist/index.js"(exports2, module2) {
+    "use strict";
+    var __create = Object.create;
+    var __defProp = Object.defineProperty;
+    var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames2 = Object.getOwnPropertyNames;
+    var __getProtoOf = Object.getPrototypeOf;
+    var __hasOwnProp = Object.prototype.hasOwnProperty;
+    var __export = (target, all) => {
+      for (var name in all)
+        __defProp(target, name, { get: all[name], enumerable: true });
+    };
+    var __copyProps = (to, from, except, desc) => {
+      if (from && typeof from === "object" || typeof from === "function") {
+        for (let key of __getOwnPropNames2(from))
+          if (!__hasOwnProp.call(to, key) && key !== except)
+            __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+      }
+      return to;
+    };
+    var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+      // If the importer is in node compatibility mode or this is not an ESM
+      // file that has been converted to a CommonJS file using a Babel-
+      // compatible transform (i.e. "__esModule" has not been set), then set
+      // "default" to the CommonJS "module.exports" for node compatibility.
+      isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+      mod
+    ));
+    var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+    var index_exports = {};
+    __export(index_exports, {
+      ClusterWinType: () => ClusterWinType,
+      GameMode: () => GameMode,
+      GameSymbol: () => GameSymbol,
+      GeneratedReelSet: () => GeneratedReelSet,
+      LinesWinType: () => LinesWinType,
+      ManywaysWinType: () => ManywaysWinType,
+      OptimizationConditions: () => OptimizationConditions,
+      OptimizationParameters: () => OptimizationParameters,
+      OptimizationScaling: () => OptimizationScaling,
+      ResultSet: () => ResultSet,
+      SPIN_TYPE: () => SPIN_TYPE,
+      StandaloneBoard: () => StandaloneBoard,
+      StaticReelSet: () => StaticReelSet,
+      createSlotGame: () => createSlotGame,
+      defineGameModes: () => defineGameModes,
+      defineSymbols: () => defineSymbols,
+      defineUserState: () => defineUserState
+    });
+    module2.exports = __toCommonJS(index_exports);
+    var SPIN_TYPE = {
+      BASE_GAME: "basegame",
+      FREE_SPINS: "freespins"
+    };
+    var import_assert = __toESM(require("assert"));
+    function createGameConfig(opts) {
+      const symbols = /* @__PURE__ */ new Map();
+      for (const [key, value] of Object.entries(opts.symbols)) {
+        (0, import_assert.default)(value.id === key, `Symbol key "${key}" does not match symbol id "${value.id}"`);
+        symbols.set(key, value);
+      }
+      const getAnticipationTrigger = (spinType) => {
+        return Math.min(...Object.keys(opts.scatterToFreespins[spinType] || {}).map(Number)) - 1;
+      };
+      return {
+        padSymbols: opts.padSymbols || 1,
+        userState: opts.userState || {},
+        ...opts,
+        symbols,
+        anticipationTriggers: {
+          [SPIN_TYPE.BASE_GAME]: getAnticipationTrigger(SPIN_TYPE.BASE_GAME),
+          [SPIN_TYPE.FREE_SPINS]: getAnticipationTrigger(SPIN_TYPE.FREE_SPINS)
+        },
+        outputDir: "__build__",
+        rootDir: opts.rootDir || process.cwd()
+      };
+    }
+    var import_fs2 = __toESM(require("fs"));
+    var import_path = __toESM(require("path"));
+    var import_assert7 = __toESM(require("assert"));
+    var import_zlib = __toESM(require("zlib"));
+    var import_readline2 = __toESM(require("readline"));
+    var import_esbuild = require("esbuild");
+    var import_worker_threads = require("worker_threads");
+    var import_assert2 = __toESM(require("assert"));
+    var AbstractService = class {
+      /**
+       * Function that returns the current game context.
+       */
+      ctx;
+      constructor(ctx) {
+        this.ctx = ctx;
+      }
+    };
+    var RngService = class extends AbstractService {
+      rng = new RandomNumberGenerator();
+      constructor(ctx) {
+        super(ctx);
+      }
+      /**
+       * Random weighted selection from a set of items.
+       */
+      weightedRandom = this.rng.weightedRandom.bind(this.rng);
+      /**
+       * Selects a random item from an array.
+       */
+      randomItem = this.rng.randomItem.bind(this.rng);
+      /**
+       * Shuffles an array.
+       */
+      shuffle = this.rng.shuffle.bind(this.rng);
+      /**
+       * Generates a random float between two values.
+       */
+      randomFloat = this.rng.randomFloat.bind(this.rng);
+      /**
+       * Sets the seed for the RNG.
+       */
+      setSeedIfDifferent = this.rng.setSeedIfDifferent.bind(this.rng);
+    };
+    var RandomNumberGenerator = class {
+      mIdum;
+      mIy;
+      mIv;
+      NTAB;
+      IA;
+      IM;
+      IQ;
+      IR;
+      NDIV;
+      AM;
+      RNMX;
+      _currentSeed = 0;
+      constructor() {
+        this.mIdum = 0;
+        this.mIy = 0;
+        this.mIv = [];
+        this.NTAB = 32;
+        this.IA = 16807;
+        this.IM = 2147483647;
+        this.IQ = 127773;
+        this.IR = 2836;
+        this.NDIV = 1 + (this.IM - 1) / this.NTAB;
+        this.AM = 1 / this.IM;
+        this.RNMX = 1 - 12e-8;
+      }
+      getCurrentSeed() {
+        return this._currentSeed;
+      }
+      setCurrentSeed(seed) {
+        this._currentSeed = seed;
+      }
+      setSeed(seed) {
+        this.mIdum = seed;
+        this.setCurrentSeed(seed);
+        if (seed >= 0) {
+          this.mIdum = -seed;
+        }
+        this.mIy = 0;
+      }
+      setSeedIfDifferent(seed) {
+        if (this.getCurrentSeed() !== seed) {
+          this.setSeed(seed);
+        }
+      }
+      generateRandomNumber() {
+        let k;
+        let j;
+        if (this.mIdum <= 0 || this.mIy === 0) {
+          if (-this.mIdum < 1) {
+            this.mIdum = 1;
+          } else {
+            this.mIdum = -this.mIdum;
+          }
+          for (j = this.NTAB + 7; j >= 0; j -= 1) {
+            k = Math.floor(this.mIdum / this.IQ);
+            this.mIdum = Math.floor(this.IA * (this.mIdum - k * this.IQ) - this.IR * k);
+            if (this.mIdum < 0) {
+              this.mIdum += this.IM;
+            }
+            if (j < this.NTAB) {
+              this.mIv[j] = this.mIdum;
+            }
+          }
+          ;
+          [this.mIy] = this.mIv;
+        }
+        k = Math.floor(this.mIdum / this.IQ);
+        this.mIdum = Math.floor(this.IA * (this.mIdum - k * this.IQ) - this.IR * k);
+        if (this.mIdum < 0) {
+          this.mIdum += this.IM;
+        }
+        j = Math.floor(this.mIy / this.NDIV);
+        this.mIy = Math.floor(this.mIv[j]);
+        this.mIv[j] = this.mIdum;
+        return this.mIy;
+      }
+      randomFloat(low, high) {
+        let float = this.AM * this.generateRandomNumber();
+        if (float > this.RNMX) {
+          float = this.RNMX;
+        }
+        return float * (high - low) + low;
+      }
+      weightedRandom(weights) {
+        const totalWeight = Object.values(weights).reduce(
+          (sum, weight) => sum + weight,
+          0
+        );
+        const randomValue = this.randomFloat(0, 1) * totalWeight;
+        let cumulativeWeight = 0;
+        for (const [key, weight] of Object.entries(weights)) {
+          cumulativeWeight += weight;
+          if (randomValue < cumulativeWeight) {
+            return key;
+          }
+        }
+        throw new Error("No item selected in weighted random selection.");
+      }
+      randomItem(array) {
+        if (array.length === 0) {
+          throw new Error("Cannot select a random item from an empty array.");
+        }
+        const randomIndex = Math.floor(this.randomFloat(0, 1) * array.length);
+        return array[randomIndex];
+      }
+      shuffle(array) {
+        const newArray = [...array];
+        let currentIndex = newArray.length, randomIndex;
+        while (currentIndex != 0) {
+          randomIndex = Math.floor(this.randomFloat(0, 1) * currentIndex);
+          currentIndex--;
+          [newArray[currentIndex], newArray[randomIndex]] = [
+            newArray[randomIndex],
+            newArray[currentIndex]
+          ];
+        }
+        return newArray;
+      }
+    };
+    var ResultSet = class {
+      criteria;
+      quota;
+      multiplier;
+      reelWeights;
+      userData;
+      forceMaxWin;
+      forceFreespins;
+      evaluate;
+      constructor(opts) {
+        this.criteria = opts.criteria;
+        this.quota = opts.quota;
+        this.multiplier = opts.multiplier;
+        this.reelWeights = opts.reelWeights;
+        this.userData = opts.userData;
+        this.forceMaxWin = opts.forceMaxWin;
+        this.forceFreespins = opts.forceFreespins;
+        this.evaluate = opts.evaluate;
+      }
+      static getNumberOfSimsForCriteria(ctx, gameModeName) {
+        const rng = new RandomNumberGenerator();
+        rng.setSeed(0);
+        (0, import_assert2.default)(ctx.simRunsAmount, "Simulation configuration is not set.");
+        const simNums = ctx.simRunsAmount[gameModeName];
+        const resultSets = ctx.gameConfig.gameModes[gameModeName]?.resultSets;
+        if (!resultSets || resultSets.length === 0) {
+          throw new Error(`No ResultSets found for game mode: ${gameModeName}.`);
+        }
+        if (simNums === void 0 || simNums <= 0) {
+          throw new Error(`No simulations configured for game mode "${gameModeName}".`);
+        }
+        const totalQuota = resultSets.reduce((sum, rs) => sum + rs.quota, 0);
+        const numberOfSimsForCriteria = Object.fromEntries(
+          resultSets.map((rs) => {
+            const normalizedQuota = totalQuota > 0 ? rs.quota / totalQuota : 0;
+            return [rs.criteria, Math.max(Math.floor(normalizedQuota * simNums), 1)];
+          })
+        );
+        let totalSims = Object.values(numberOfSimsForCriteria).reduce(
+          (sum, num) => sum + num,
+          0
+        );
+        let reduceSims = totalSims > simNums;
+        const criteriaToWeights = Object.fromEntries(
+          resultSets.map((rs) => [rs.criteria, rs.quota])
+        );
+        while (totalSims !== simNums) {
+          const rs = rng.weightedRandom(criteriaToWeights);
+          if (reduceSims && numberOfSimsForCriteria[rs] > 1) {
+            numberOfSimsForCriteria[rs] -= 1;
+          } else if (!reduceSims) {
+            numberOfSimsForCriteria[rs] += 1;
+          }
+          totalSims = Object.values(numberOfSimsForCriteria).reduce(
+            (sum, num) => sum + num,
+            0
+          );
+          reduceSims = totalSims > simNums;
+        }
+        return numberOfSimsForCriteria;
+      }
+      /**
+       * Checks if core criteria is met, e.g. target multiplier or max win.
+       */
+      meetsCriteria(ctx) {
+        const customEval = this.evaluate?.(ctx);
+        const freespinsMet = this.forceFreespins ? ctx.state.triggeredFreespins : true;
+        const wallet = ctx.services.wallet._getWallet();
+        const multiplierMet = this.forceMaxWin ? true : this.multiplier !== void 0 ? wallet.getCurrentWin() === this.multiplier : wallet.getCurrentWin() > 0;
+        const maxWinMet = this.forceMaxWin ? wallet.getCurrentWin() >= ctx.config.maxWinX : true;
+        const coreCriteriaMet = freespinsMet && multiplierMet && maxWinMet;
+        const finalResult = customEval !== void 0 ? coreCriteriaMet && customEval === true : coreCriteriaMet;
+        if (this.forceMaxWin && maxWinMet) {
+          ctx.services.data.record({
+            maxwin: true
+          });
+        }
+        return finalResult;
+      }
+    };
+    function createGameState(opts) {
+      return {
+        currentSimulationId: opts?.currentSimulationId || 0,
+        currentGameMode: opts?.currentGameMode || "N/A",
+        currentSpinType: opts?.currentSpinType || SPIN_TYPE.BASE_GAME,
+        currentResultSet: opts?.currentResultSet || new ResultSet({
+          criteria: "N/A",
+          quota: 0,
+          reelWeights: {
+            [SPIN_TYPE.BASE_GAME]: {},
+            [SPIN_TYPE.FREE_SPINS]: {}
+          }
+        }),
+        isCriteriaMet: opts?.isCriteriaMet || false,
+        currentFreespinAmount: opts?.currentFreespinAmount || 0,
+        totalFreespinAmount: opts?.totalFreespinAmount || 0,
+        userData: opts?.userData || {},
+        triggeredMaxWin: opts?.triggeredMaxWin || false,
+        triggeredFreespins: opts?.triggeredFreespins || false
+      };
+    }
+    var Recorder = class {
+      records;
+      pendingRecords;
+      constructor() {
+        this.records = [];
+        this.pendingRecords = [];
+      }
+    };
+    var import_assert3 = __toESM(require("assert"));
+    var GameSymbol = class _GameSymbol {
+      id;
+      pays;
+      properties;
+      constructor(opts) {
+        this.id = opts.id;
+        this.pays = opts.pays;
+        this.properties = new Map(Object.entries(opts.properties || {}));
+        if (this.pays && Object.keys(this.pays).length === 0) {
+          throw new Error(`GameSymbol "${this.id}" must have pays defined.`);
+        }
+      }
+      /**
+       * Compares this symbol to another symbol or a set of properties.
+       */
+      compare(symbolOrProperties) {
+        if (!symbolOrProperties) {
+          console.warn("No symbol or properties provided for comparison.");
+          return false;
+        }
+        if (symbolOrProperties instanceof _GameSymbol) {
+          return this.id === symbolOrProperties.id;
+        } else {
+          for (const [key, value] of Object.entries(symbolOrProperties)) {
+            if (!this.properties.has(key) || this.properties.get(key) !== value) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
+      /**
+       * Creates a clone of this GameSymbol.
+       */
+      clone() {
+        return new _GameSymbol({
+          id: this.id,
+          pays: this.pays ? { ...this.pays } : void 0,
+          properties: Object.fromEntries(this.properties)
+        });
+      }
+    };
+    var Board = class {
+      /**
+       * The current reels on the board.\
+       * Includes only the visible symbols (without padding).
+       */
+      reels;
+      /**
+       * The top padding symbols on the board.\
+       * These are the symbols above the visible area.
+       */
+      paddingTop;
+      /**
+       * The bottom padding symbols on the board.\
+       * These are the symbols below the visible area.
+       */
+      paddingBottom;
+      /**
+       * The anticipation values for each reel on the board.\
+       * Used for triggering anticipation effects.
+       */
+      anticipation;
+      lastDrawnReelStops;
+      lastUsedReels;
+      constructor() {
+        this.reels = [];
+        this.paddingTop = [];
+        this.paddingBottom = [];
+        this.anticipation = [];
+        this.lastDrawnReelStops = [];
+        this.lastUsedReels = [];
+      }
+      getSymbol(reelIndex, rowIndex) {
+        return this.reels[reelIndex]?.[rowIndex];
+      }
+      setSymbol(reelIndex, rowIndex, symbol) {
+        this.reels[reelIndex] = this.reels[reelIndex] || [];
+        this.reels[reelIndex][rowIndex] = symbol;
+      }
+      removeSymbol(reelIndex, rowIndex) {
+        if (this.reels[reelIndex]) {
+          this.reels[reelIndex].splice(rowIndex, 1);
+        }
+      }
+      makeEmptyReels(opts) {
+        const length = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        (0, import_assert3.default)(length, "Cannot make empty reels without context or reelsAmount.");
+        return Array.from({ length }, () => []);
+      }
+      countSymbolsOnReel(symbolOrProperties, reelIndex) {
+        let total = 0;
+        for (const symbol of this.reels[reelIndex]) {
+          let matches = true;
+          if (symbolOrProperties instanceof GameSymbol) {
+            if (symbol.id !== symbolOrProperties.id) matches = false;
+          } else {
+            for (const [key, value] of Object.entries(symbolOrProperties)) {
+              if (!symbol.properties.has(key) || symbol.properties.get(key) !== value) {
+                matches = false;
+                break;
+              }
+            }
+          }
+          if (matches) {
+            total++;
+          }
+        }
+        return total;
+      }
+      countSymbolsOnBoard(symbolOrProperties) {
+        let total = 0;
+        const onReel = {};
+        for (const [ridx, reel] of this.reels.entries()) {
+          for (const symbol of reel) {
+            let matches = true;
+            if (symbolOrProperties instanceof GameSymbol) {
+              if (symbol.id !== symbolOrProperties.id) matches = false;
+            } else {
+              for (const [key, value] of Object.entries(symbolOrProperties)) {
+                if (!symbol.properties.has(key) || symbol.properties.get(key) !== value) {
+                  matches = false;
+                  break;
+                }
+              }
+            }
+            if (matches) {
+              total++;
+              if (onReel[ridx] === void 0) {
+                onReel[ridx] = 1;
+              } else {
+                onReel[ridx]++;
+              }
+            }
+          }
+        }
+        return [total, onReel];
+      }
+      isSymbolOnAnyReelMultipleTimes(symbol) {
+        for (const reel of this.reels) {
+          let count = 0;
+          for (const sym of reel) {
+            if (sym.id === symbol.id) {
+              count++;
+            }
+            if (count > 1) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+      getReelStopsForSymbol(reels, symbol) {
+        const reelStops = [];
+        for (let ridx = 0; ridx < reels.length; ridx++) {
+          const reel = reels[ridx];
+          const positions = [];
+          for (let pos = 0; pos < reel.length; pos++) {
+            if (reel[pos].id === symbol.id) {
+              positions.push(pos);
+            }
+          }
+          reelStops.push(positions);
+        }
+        return reelStops;
+      }
+      combineReelStops(opts) {
+        const reelsAmount = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        (0, import_assert3.default)(reelsAmount, "Cannot combine reel stops without context or reelsAmount.");
+        const combined = [];
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          combined[ridx] = [];
+          for (const stops of opts.reelStops) {
+            combined[ridx] = combined[ridx].concat(stops[ridx]);
+          }
+        }
+        return combined;
+      }
+      getRandomReelStops(opts) {
+        const reelsAmount = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        (0, import_assert3.default)(reelsAmount, "Cannot get random reel stops without context or reelsAmount.");
+        const symProbsOnReels = [];
+        const stopPositionsForReels = {};
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          symProbsOnReels.push(opts.reelStops[ridx].length / opts.reels[ridx].length);
+        }
+        while (Object.keys(stopPositionsForReels).length !== opts.amount) {
+          const possibleReels = [];
+          for (let i = 0; i < reelsAmount; i++) {
+            if (symProbsOnReels[i] > 0) {
+              possibleReels.push(i);
+            }
+          }
+          const possibleProbs = symProbsOnReels.filter((p) => p > 0);
+          const weights = Object.fromEntries(
+            possibleReels.map((ridx, idx) => [ridx, possibleProbs[idx]])
+          );
+          const chosenReel = opts.ctx.services.rng.weightedRandom(weights);
+          const chosenStop = opts.ctx.services.rng.randomItem(
+            opts.reelStops[Number(chosenReel)]
+          );
+          symProbsOnReels[Number(chosenReel)] = 0;
+          stopPositionsForReels[Number(chosenReel)] = chosenStop;
+        }
+        return stopPositionsForReels;
+      }
+      getRandomReelset(ctx) {
+        const weights = ctx.state.currentResultSet.reelWeights;
+        const evalWeights = ctx.state.currentResultSet.reelWeights.evaluate?.(ctx);
+        let reelSetId = "";
+        if (evalWeights) {
+          reelSetId = ctx.services.rng.weightedRandom(evalWeights);
+        } else {
+          reelSetId = ctx.services.rng.weightedRandom(weights[ctx.state.currentSpinType]);
+        }
+        const reelSet = ctx.services.game.getReelsetById(ctx.state.currentGameMode, reelSetId);
+        return reelSet;
+      }
+      resetReels(opts) {
+        const length = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        this.reels = this.makeEmptyReels(opts);
+        this.anticipation = Array.from({ length }, () => false);
+        this.paddingTop = this.makeEmptyReels(opts);
+        this.paddingBottom = this.makeEmptyReels(opts);
+      }
+      drawBoardMixed(opts) {
+        this.resetReels(opts);
+        const reelsAmount = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        const symbolsPerReel = opts.symbolsPerReel ?? opts.ctx.services.game.getCurrentGameMode().symbolsPerReel;
+        const padSymbols = opts.padSymbols ?? opts.ctx.config.padSymbols;
+        const finalReelStops = Array.from(
+          { length: reelsAmount },
+          () => null
+        );
+        if (opts.forcedStops) {
+          for (const [r, stopPos] of Object.entries(opts.forcedStops)) {
+            const reelIdx = Number(r);
+            const symCount = symbolsPerReel[reelIdx];
+            if (opts.forcedStopsOffset !== false) {
+              finalReelStops[reelIdx] = stopPos - Math.round(opts.ctx.services.rng.randomFloat(0, symCount - 1));
+            } else {
+              finalReelStops[reelIdx] = stopPos;
+            }
+            if (finalReelStops[reelIdx] < 0) {
+              finalReelStops[reelIdx] = opts.reels[reelIdx].length + finalReelStops[reelIdx];
+            }
+          }
+        }
+        for (let i = 0; i < finalReelStops.length; i++) {
+          if (finalReelStops[i] === null) {
+            finalReelStops[i] = Math.floor(
+              opts.ctx.services.rng.randomFloat(0, opts.reels[i].length - 1)
+            );
+          }
+        }
+        this.lastDrawnReelStops = finalReelStops.map((pos) => pos);
+        this.lastUsedReels = opts.reels;
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          const reelPos = finalReelStops[ridx];
+          const reelLength = opts.reels[ridx].length;
+          for (let p = padSymbols - 1; p >= 0; p--) {
+            const topPos = ((reelPos - (p + 1)) % reelLength + reelLength) % reelLength;
+            this.paddingTop[ridx].push(opts.reels[ridx][topPos]);
+            const bottomPos = (reelPos + symbolsPerReel[ridx] + p) % reelLength;
+            this.paddingBottom[ridx].unshift(opts.reels[ridx][bottomPos]);
+          }
+          for (let row = 0; row < symbolsPerReel[ridx]; row++) {
+            const symbol = opts.reels[ridx][(reelPos + row) % reelLength];
+            if (!symbol) {
+              throw new Error(`Failed to get symbol at pos ${reelPos + row} on reel ${ridx}`);
+            }
+            this.reels[ridx][row] = symbol;
+          }
+        }
+        return {
+          stopPositions: this.lastDrawnReelStops
+        };
+      }
+      tumbleBoard(opts) {
+        (0, import_assert3.default)(this.lastDrawnReelStops.length > 0, "Cannot tumble board before drawing it.");
+        const reelsAmount = opts.reelsAmount ?? opts.ctx.services.game.getCurrentGameMode().reelsAmount;
+        const symbolsPerReel = opts.symbolsPerReel ?? opts.ctx.services.game.getCurrentGameMode().symbolsPerReel;
+        const padSymbols = opts.padSymbols ?? opts.ctx.config.padSymbols;
+        if (opts.startingStops) {
+          (0, import_assert3.default)(
+            opts.startingStops.length === reelsAmount,
+            "Starting stops length does not match reels amount."
+          );
+          (0, import_assert3.default)(opts.reels, "Reels must be provided when using startingStops.");
+        }
+        if (opts.reels) {
+          (0, import_assert3.default)(opts.startingStops, "Starting stops must be provided when using reels.");
+        }
+        if (!opts.ctx && !reelsAmount && !symbolsPerReel) {
+          throw new Error(
+            "If ctx is not provided, reelsAmount and symbolsPerReel must be given."
+          );
+        }
+        const reels = opts.reels || this.lastUsedReels;
+        (0, import_assert3.default)(
+          reels.length === reelsAmount,
+          "Given reels length does not match reels amount."
+        );
+        const sortedDeletions = [...opts.symbolsToDelete].sort((a, b) => b.rowIdx - a.rowIdx);
+        sortedDeletions.forEach(({ reelIdx, rowIdx }) => {
+          this.reels[reelIdx].splice(rowIdx, 1);
+        });
+        const newFirstSymbolPositions = {};
+        const newBoardSymbols = {};
+        const newPaddingTopSymbols = {};
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          while (this.reels[ridx].length < symbolsPerReel[ridx]) {
+            const padSymbol = this.paddingTop[ridx]?.pop();
+            if (padSymbol) {
+              this.reels[ridx].unshift(padSymbol);
+              if (!newBoardSymbols[ridx]) {
+                newBoardSymbols[ridx] = [];
+              }
+              newBoardSymbols[ridx].unshift(padSymbol);
+            } else {
+              break;
+            }
+          }
+          const previousStop = this.lastDrawnReelStops[ridx];
+          const stopBeforePad = previousStop - padSymbols - 1;
+          const symbolsNeeded = symbolsPerReel[ridx] - this.reels[ridx].length;
+          for (let s = 0; s < symbolsNeeded; s++) {
+            const symbolPos = (stopBeforePad - s + reels[ridx].length) % reels[ridx].length;
+            let newSymbol = reels[ridx][symbolPos];
+            const startStops = opts.startingStops;
+            if (startStops) {
+              const forcedSym = reels[ridx][startStops?.[ridx]];
+              (0, import_assert3.default)(
+                forcedSym,
+                `Failed to get forced symbol for tumbling. Tried to get symbol for position ${startStops?.[ridx]} on reel ${ridx}.`
+              );
+              newSymbol = forcedSym;
+            }
+            (0, import_assert3.default)(newSymbol, "Failed to get new symbol for tumbling.");
+            this.reels[ridx].unshift(newSymbol);
+            newFirstSymbolPositions[ridx] = symbolPos;
+            if (!newBoardSymbols[ridx]) {
+              newBoardSymbols[ridx] = [];
+            }
+            newBoardSymbols[ridx].unshift(newSymbol);
+          }
+        }
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          const firstSymbolPos = newFirstSymbolPositions[ridx];
+          if (firstSymbolPos === void 0) continue;
+          for (let p = 1; p <= padSymbols; p++) {
+            const topPos = (firstSymbolPos - p + reels[ridx].length) % reels[ridx].length;
+            const padSymbol = reels[ridx][topPos];
+            (0, import_assert3.default)(padSymbol, "Failed to get new padding symbol for tumbling.");
+            this.paddingTop[ridx].unshift(padSymbol);
+            if (!newPaddingTopSymbols[ridx]) {
+              newPaddingTopSymbols[ridx] = [];
+            }
+            newPaddingTopSymbols[ridx].unshift(padSymbol);
+          }
+        }
+        if (!opts.reels && !opts.startingStops) {
+          this.lastDrawnReelStops = this.lastDrawnReelStops.map((stop, ridx) => {
+            return newFirstSymbolPositions[ridx] ?? stop;
+          });
+        }
+        return {
+          newBoardSymbols,
+          newPaddingTopSymbols
+        };
+      }
+      dedupeWinSymbolsForTumble(winCombinations) {
+        const symbolsMap = /* @__PURE__ */ new Map();
+        winCombinations.forEach((wc) => {
+          wc.symbols.forEach((s) => {
+            symbolsMap.set(`${s.reelIndex},${s.posIndex}`, {
+              reelIdx: s.reelIndex,
+              rowIdx: s.posIndex
+            });
+          });
+        });
+        const symbolsToRemove = Array.from(symbolsMap.values());
+        return symbolsToRemove;
+      }
+    };
+    var BoardService = class extends AbstractService {
+      board;
+      constructor(ctx) {
+        super(ctx);
+        this.board = new Board();
+      }
+      /**
+       * Resets the board to an empty state.\
+       * This is called before drawing a new board.
+       */
+      resetBoard() {
+        this.resetReels();
+        this.board.lastDrawnReelStops = [];
+      }
+      /**
+       * Gets the current reels and symbols on the board.
+       */
+      getBoardReels() {
+        return this.board.reels;
+      }
+      getPaddingTop() {
+        return this.board.paddingTop;
+      }
+      getPaddingBottom() {
+        return this.board.paddingBottom;
+      }
+      getAnticipation() {
+        return this.board.anticipation;
+      }
+      /**
+       * Gets the symbol at the specified reel and row index.
+       */
+      getSymbol(reelIndex, rowIndex) {
+        return this.board.getSymbol(reelIndex, rowIndex);
+      }
+      /**
+       * Sets the symbol at the specified reel and row index.
+       */
+      setSymbol(reelIndex, rowIndex, symbol) {
+        this.board.setSymbol(reelIndex, rowIndex, symbol);
+      }
+      /**
+       * Removes the symbol at the specified reel and row index.
+       */
+      removeSymbol(reelIndex, rowIndex) {
+        this.board.removeSymbol(reelIndex, rowIndex);
+      }
+      resetReels() {
+        this.board.resetReels({
+          ctx: this.ctx()
+        });
+      }
+      /**
+       * Sets the anticipation value for a specific reel.
+       */
+      setAnticipationForReel(reelIndex, value) {
+        this.board.anticipation[reelIndex] = value;
+      }
+      /**
+       * Counts how many symbols matching the criteria are on a specific reel.
+       */
+      countSymbolsOnReel(symbolOrProperties, reelIndex) {
+        return this.board.countSymbolsOnReel(symbolOrProperties, reelIndex);
+      }
+      /**
+       * Counts how many symbols matching the criteria are on the board.
+       *
+       * Passing a GameSymbol will compare by ID, passing a properties object will compare by properties.
+       *
+       * Returns a tuple where the first element is the total count, and the second element is a record of counts per reel index.
+       */
+      countSymbolsOnBoard(symbolOrProperties) {
+        return this.board.countSymbolsOnBoard(symbolOrProperties);
+      }
+      /**
+       * Checks if a symbol appears more than once on any reel in the current reel set.
+       *
+       * Useful to check for "forbidden" generations, e.g. 2 scatters on one reel.
+       */
+      isSymbolOnAnyReelMultipleTimes(symbol) {
+        return this.board.isSymbolOnAnyReelMultipleTimes(symbol);
+      }
+      /**
+       * Gets all reel stops (positions) where the specified symbol appears in the current reel set.\
+       * Returns an array of arrays, where each inner array contains the positions for the corresponding reel.
+       */
+      getReelStopsForSymbol(reels, symbol) {
+        return this.board.getReelStopsForSymbol(reels, symbol);
+      }
+      /**
+       * Combines multiple arrays of reel stops into a single array of reel stops.\
+       */
+      combineReelStops(...reelStops) {
+        return this.board.combineReelStops({
+          ctx: this.ctx(),
+          reelStops
+        });
+      }
+      /**
+       * From a list of reel stops on reels, selects a random stop for a speficied number of random symbols.
+       *
+       * Mostly useful for placing scatter symbols on the board.
+       */
+      getRandomReelStops(reels, reelStops, amount) {
+        return this.board.getRandomReelStops({
+          ctx: this.ctx(),
+          reels,
+          reelStops,
+          amount
+        });
+      }
+      /**
+       * Selects a random reel set based on the configured weights of the current result set.\
+       * Returns the reels as arrays of GameSymbols.
+       */
+      getRandomReelset() {
+        return this.board.getRandomReelset(this.ctx());
+      }
+      /**
+       * Draws a board using specified reel stops.
+       */
+      drawBoardWithForcedStops(opts) {
+        return this.drawBoardMixed(opts.reels, opts.forcedStops, opts.randomOffset);
+      }
+      /**
+       * Draws a board using random reel stops.
+       */
+      drawBoardWithRandomStops(reels) {
+        return this.drawBoardMixed(reels);
+      }
+      drawBoardMixed(reels, forcedStops, forcedStopsOffset) {
+        return this.board.drawBoardMixed({
+          ctx: this.ctx(),
+          reels,
+          forcedStops,
+          forcedStopsOffset
+        });
+      }
+      /**
+       * Tumbles the board. All given symbols will be deleted and new symbols will fall from the top.
+       */
+      tumbleBoard(symbolsToDelete) {
+        return this.board.tumbleBoard({
+          ctx: this.ctx(),
+          symbolsToDelete
+        });
+      }
+      /**
+       * **Experimental - May be changed or replaced in the future**
+       *
+       * Tumbles the board normally like `tumbleBoard`, but allows specifying a different reel set to get symbols from.\
+       * Also requires specifying the starting stops from where the symbols will be tumbled.\
+       * **This method does not remember the last tumbled position. Use this if you need to do a singular one-off tumble.**
+       */
+      tumbleBoardAndForget(opts) {
+        return this.board.tumbleBoard({
+          ctx: this.ctx(),
+          symbolsToDelete: opts.symbolsToDelete,
+          reels: opts.reels,
+          startingStops: opts.forcedStops
+        });
+      }
+      /**
+       * Dedupes win symbols for tumble.\
+       * Returns a list of symbols to remove from the board based on the given win combinations.
+       *
+       * Since it may be possible that multiple win combinations include the same symbol (e.g. Wilds),\
+       * this method ensures that each symbol is only listed once for removal. Otherwise tumbling may break.
+       */
+      dedupeWinSymbolsForTumble(winCombinations) {
+        return this.board.dedupeWinSymbolsForTumble(winCombinations);
+      }
+      /**
+       * Sets the symbolsPerReel for the current game mode.
+       *
+       * The value will be reset to the original value as set in the game mode config in the next simulation.
+       */
+      setSymbolsPerReel(symbolsPerReel) {
+        this.ctx().config.gameModes[this.ctx().state.currentGameMode]._setSymbolsPerReel(
+          symbolsPerReel
+        );
+      }
+      /**
+       * Sets the reelsAmount for the current game mode.
+       *
+       * The value will be reset to the original value as set in the game mode config in the next simulation.
+       */
+      setReelsAmount(reelsAmount) {
+        this.ctx().config.gameModes[this.ctx().state.currentGameMode]._setReelsAmount(
+          reelsAmount
+        );
+      }
+    };
+    var import_assert4 = __toESM(require("assert"));
+    var DataService = class extends AbstractService {
+      recorder;
+      book;
+      constructor(ctx) {
+        super(ctx);
+      }
+      ensureRecorder() {
+        (0, import_assert4.default)(this.recorder, "Recorder not set in DataService. Call setRecorder() first.");
+      }
+      ensureBook() {
+        (0, import_assert4.default)(this.book, "Book not set in DataService. Call setBook() first.");
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _setRecorder(recorder) {
+        this.recorder = recorder;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _getBook() {
+        return this.book;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _setBook(book) {
+        this.book = book;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _getRecorder() {
+        return this.recorder;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _getRecords() {
+        this.ensureRecorder();
+        return this.recorder.records;
+      }
+      /**
+       * Record data for statistical analysis.
+       */
+      record(data) {
+        this.ensureRecorder();
+        this.recorder.pendingRecords.push({
+          bookId: this.ctx().state.currentSimulationId,
+          properties: Object.fromEntries(
+            Object.entries(data).map(([k, v]) => [k, String(v)])
+          )
+        });
+      }
+      /**
+       * Records a symbol occurrence for statistical analysis.
+       *
+       * Calls `ctx.services.data.record()` with the provided data.
+       */
+      recordSymbolOccurrence(data) {
+        this.record(data);
+      }
+      /**
+       * Adds an event to the book.
+       */
+      addBookEvent(event) {
+        this.ensureBook();
+        this.book.addEvent(event);
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _clearPendingRecords() {
+        this.ensureRecorder();
+        this.recorder.pendingRecords = [];
+      }
+    };
+    var GameService = class extends AbstractService {
+      constructor(ctx) {
+        super(ctx);
+      }
+      /**
+       * Intended for internal use only.\
+       * Generates reels for all reel sets in the game configuration.
+       */
+      _generateReels() {
+        const config = this.ctx().config;
+        for (const mode of Object.values(config.gameModes)) {
+          if (mode.reelSets && mode.reelSets.length > 0) {
+            for (const reelSet of Object.values(mode.reelSets)) {
+              reelSet.associatedGameModeName = mode.name;
+              reelSet.generateReels(config);
+            }
+          } else {
+            throw new Error(
+              `Game mode "${mode.name}" has no reel sets defined. Cannot generate reelset files.`
+            );
+          }
+        }
+      }
+      /**
+       * Retrieves a reel set by its ID within a specific game mode.
+       */
+      getReelsetById(gameMode, id) {
+        const reelSet = this.ctx().config.gameModes[gameMode].reelSets.find(
+          (rs) => rs.id === id
+        );
+        if (!reelSet) {
+          throw new Error(
+            `Reel set with id "${id}" not found in game mode "${gameMode}". Available reel sets: ${this.ctx().config.gameModes[gameMode].reelSets.map((rs) => rs.id).join(", ")}`
+          );
+        }
+        return reelSet.reels;
+      }
+      /**
+       * Retrieves the number of free spins awarded for a given spin type and scatter count.
+       */
+      getFreeSpinsForScatters(spinType, scatterCount) {
+        const freespinsConfig = this.ctx().config.scatterToFreespins[spinType];
+        if (!freespinsConfig) {
+          throw new Error(
+            `No free spins configuration found for spin type "${spinType}". Please check your game configuration.`
+          );
+        }
+        return freespinsConfig[scatterCount] || 0;
+      }
+      /**
+       * Retrieves a result set by its criteria within a specific game mode.
+       */
+      getResultSetByCriteria(mode, criteria) {
+        const gameMode = this.ctx().config.gameModes[mode];
+        if (!gameMode) {
+          throw new Error(`Game mode "${mode}" not found in game config.`);
+        }
+        const resultSet = gameMode.resultSets.find((rs) => rs.criteria === criteria);
+        if (!resultSet) {
+          throw new Error(
+            `Criteria "${criteria}" not found in game mode "${mode}". Available criteria: ${gameMode.resultSets.map((rs) => rs.criteria).join(", ")}`
+          );
+        }
+        return resultSet;
+      }
+      /**
+       * Returns all configured symbols as an array.
+       */
+      getSymbolArray() {
+        return Array.from(this.ctx().config.symbols).map(([n, v]) => v);
+      }
+      /**
+       * Gets the configuration for the current game mode.
+       */
+      getCurrentGameMode() {
+        return this.ctx().config.gameModes[this.ctx().state.currentGameMode];
+      }
+      /**
+       * Ensures the requested number of scatters is valid based on the game configuration.\
+       * Returns a valid number of scatters.
+       */
+      verifyScatterCount(numScatters) {
+        const scatterCounts = this.ctx().config.scatterToFreespins[this.ctx().state.currentSpinType];
+        if (!scatterCounts) {
+          throw new Error(
+            `No scatter counts defined for spin type "${this.ctx().state.currentSpinType}". Please check your game configuration.`
+          );
+        }
+        const validCounts = Object.keys(scatterCounts).map((key) => parseInt(key, 10));
+        if (validCounts.length === 0) {
+          throw new Error(
+            `No scatter counts defined for spin type "${this.ctx().state.currentSpinType}". Please check your game configuration.`
+          );
+        }
+        if (numScatters < Math.min(...validCounts)) {
+          return Math.min(...validCounts);
+        }
+        if (numScatters > Math.max(...validCounts)) {
+          return Math.max(...validCounts);
+        }
+        return numScatters;
+      }
+      /**
+       * Increases the freespin count by the specified amount.
+       *
+       * Also sets `state.triggeredFreespins` to true.
+       */
+      awardFreespins(amount) {
+        this.ctx().state.currentFreespinAmount += amount;
+        this.ctx().state.totalFreespinAmount += amount;
+        this.ctx().state.triggeredFreespins = true;
+      }
+      /**
+       * Dedupes win symbols.
+       *
+       * Since it may be possible that multiple win combinations include the same symbol (e.g. Wilds),\
+       * this method ensures that each symbol is only listed once.
+       * 
+       * If you want to tumble based on winning symbols, run them through this method first.
+       */
+      dedupeWinSymbols(winCombinations) {
+        const symbolsMap = /* @__PURE__ */ new Map();
+        winCombinations.forEach((wc) => {
+          wc.symbols.forEach((s) => {
+            symbolsMap.set(`${s.reelIndex},${s.posIndex}`, {
+              reelIdx: s.reelIndex,
+              rowIdx: s.posIndex
+            });
+          });
+        });
+        const symbolsToRemove = Array.from(symbolsMap.values());
+        return symbolsToRemove;
+      }
+    };
+    var import_assert5 = __toESM(require("assert"));
+    var WalletService = class extends AbstractService {
+      wallet;
+      constructor(ctx) {
+        super(ctx);
+      }
+      ensureWallet() {
+        (0, import_assert5.default)(this.wallet, "Wallet not set in WalletService. Call setWallet() first.");
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _getWallet() {
+        this.ensureWallet();
+        return this.wallet;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _setWallet(wallet) {
+        this.wallet = wallet;
+      }
+      /**
+       * Adds the given amount to the wallet state.
+       *
+       * After calculating the win for a board, call this method to update the wallet state.\
+       * If your game has tumbling mechanics, you should call this method again after every new tumble and win calculation.
+       */
+      addSpinWin(amount) {
+        this.ensureWallet();
+        this.wallet.addSpinWin(amount);
+      }
+      /**
+       * Helps to add tumble wins to the wallet state.
+       *
+       * This also calls `addSpinWin()` internally, to add the tumble win to the overall spin win.
+       */
+      addTumbleWin(amount) {
+        this.ensureWallet();
+        this.wallet.addTumbleWin(amount);
+      }
+      /**
+       * Confirms the wins of the current spin.
+       *
+       * Should be called after `addSpinWin()`, and after your tumble events are played out,\
+       * and after a (free) spin is played out to finalize the win.
+       */
+      confirmSpinWin() {
+        this.ensureWallet();
+        this.wallet.confirmSpinWin(this.ctx().state.currentSpinType);
+      }
+      /**
+       * Gets the total win amount of the current simulation.
+       */
+      getCurrentWin() {
+        this.ensureWallet();
+        return this.wallet.getCurrentWin();
+      }
+      /**
+       * Gets the current spin win amount of the ongoing spin.
+       */
+      getCurrentSpinWin() {
+        this.ensureWallet();
+        return this.wallet.getCurrentSpinWin();
+      }
+      /**
+       * Gets the current tumble win amount of the ongoing spin.
+       */
+      getCurrentTumbleWin() {
+        this.ensureWallet();
+        return this.wallet.getCurrentTumbleWin();
+      }
+    };
+    function createGameContext(opts) {
+      const context = {
+        config: opts.config,
+        state: createGameState(opts.state),
+        services: {}
+      };
+      const getContext = () => context;
+      function createServices() {
+        return {
+          game: new GameService(getContext),
+          data: new DataService(getContext),
+          board: new BoardService(getContext),
+          wallet: new WalletService(getContext),
+          rng: new RngService(getContext),
+          ...opts.services
+        };
+      }
+      context.services = createServices();
+      return context;
+    }
+    var import_fs = __toESM(require("fs"));
+    var import_readline = __toESM(require("readline"));
+    function createDirIfNotExists(dirPath) {
+      if (!import_fs.default.existsSync(dirPath)) {
+        import_fs.default.mkdirSync(dirPath, { recursive: true });
+      }
+    }
+    function writeJsonFile(filePath, data) {
+      try {
+        import_fs.default.writeFileSync(filePath, JSON.stringify(data, null, 2), {
+          encoding: "utf8"
+        });
+      } catch (error) {
+        throw new Error(`Failed to write JSON file at ${filePath}: ${error}`);
+      }
+    }
+    function writeFile(filePath, data) {
+      try {
+        import_fs.default.writeFileSync(filePath, data, { encoding: "utf8" });
+      } catch (error) {
+        throw new Error(`Failed to write file at ${filePath}: ${error}`);
+      }
+    }
+    function copy(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+    var JSONL = class {
+      static stringify(array) {
+        return array.map((object) => JSON.stringify(object)).join("\n");
+      }
+      static parse(jsonl) {
+        return jsonl.split("\n").filter((s) => s !== "").map((str) => JSON.parse(str));
+      }
+      static async convertToJson(inputPath, outputPath) {
+        const writeStream = import_fs.default.createWriteStream(outputPath, { encoding: "utf-8" });
+        writeStream.write("[\n");
+        const rl = import_readline.default.createInterface({
+          input: import_fs.default.createReadStream(inputPath),
+          crlfDelay: Infinity
+        });
+        let isFirst = true;
+        for await (const line of rl) {
+          if (line.trim() === "") continue;
+          if (!isFirst) {
+            writeStream.write(",\n");
+          }
+          writeStream.write(line);
+          isFirst = false;
+        }
+        writeStream.write("\n]");
+        writeStream.end();
+        return new Promise((resolve, reject) => {
+          writeStream.on("finish", () => resolve());
+          writeStream.on("error", reject);
+        });
+      }
+    };
+    function round(value, decimals) {
+      return Number(Math.round(Number(value + "e" + decimals)) + "e-" + decimals);
+    }
+    var Book = class {
+      id;
+      criteria = "N/A";
+      events = [];
+      payout = 0;
+      basegameWins = 0;
+      freespinsWins = 0;
+      constructor(opts) {
+        this.id = opts.id;
+        this.criteria = opts.criteria;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      setCriteria(criteria) {
+        this.criteria = criteria;
+      }
+      /**
+       * Adds an event to the book.
+       */
+      addEvent(event) {
+        const index = this.events.length + 1;
+        this.events.push({
+          index,
+          type: event.type,
+          data: copy(event.data)
+        });
+      }
+      /**
+       * Intended for internal use only.
+       */
+      serialize() {
+        return {
+          id: this.id,
+          criteria: this.criteria,
+          events: this.events,
+          payout: this.payout,
+          basegameWins: this.basegameWins,
+          freespinsWins: this.freespinsWins
+        };
+      }
+    };
+    var Wallet = class {
+      /**
+       * Total win amount (as the bet multiplier) from all simulations.
+       */
+      cumulativeWins = 0;
+      /**
+       * Total win amount (as the bet multiplier) per spin type.
+       *
+       * @example
+       * ```ts
+       * {
+       *   basegame: 50,
+       *   freespins: 100,
+       *   superfreespins: 200,
+       * }
+       * ```
+       */
+      cumulativeWinsPerSpinType = {
+        [SPIN_TYPE.BASE_GAME]: 0,
+        [SPIN_TYPE.FREE_SPINS]: 0
+      };
+      /**
+       * Current win amount (as the bet multiplier) for the ongoing simulation.
+       */
+      currentWin = 0;
+      /**
+       * Current win amount (as the bet multiplier) for the ongoing simulation per spin type.
+       *
+       * @example
+       * ```ts
+       * {
+       *   basegame: 50,
+       *   freespins: 100,
+       *   superfreespins: 200,
+       * }
+       * ```
+       */
+      currentWinPerSpinType = {
+        [SPIN_TYPE.BASE_GAME]: 0,
+        [SPIN_TYPE.FREE_SPINS]: 0
+      };
+      /**
+       * Holds the current win amount for a single (free) spin.\
+       * After each spin, this amount is added to `currentWinPerSpinType` and then reset to zero.
+       */
+      currentSpinWin = 0;
+      /**
+       * Current win amount (as the bet multiplier) for the ongoing tumble sequence.
+       */
+      currentTumbleWin = 0;
+      constructor() {
+      }
+      /**
+       * Updates the win for the current spin.
+       *
+       * Should be called after each tumble event, if applicable.\
+       * Or generally call this to add wins during a spin.
+       *
+       * After each (free) spin, this amount should be added to `currentWinPerSpinType` via `confirmSpinWin()`
+       */
+      addSpinWin(amount) {
+        this.currentSpinWin += amount;
+      }
+      /**
+       * Confirms the wins of the current spin.
+       *
+       * Should be called after `addSpinWin()`, and after your tumble events are played out,\
+       * and after a (free) spin is played out to finalize the win.
+       */
+      confirmSpinWin(spinType) {
+        if (!Object.keys(this.currentWinPerSpinType).includes(spinType)) {
+          throw new Error(`Spin type "${spinType}" does not exist in the wallet.`);
+        }
+        this.currentWinPerSpinType[spinType] += this.currentSpinWin;
+        this.currentWin += this.currentSpinWin;
+        this.currentSpinWin = 0;
+        this.currentTumbleWin = 0;
+      }
+      /**
+       * Returns the accumulated win amount (as the bet multiplier) from all simulations.
+       */
+      getCumulativeWins() {
+        return this.cumulativeWins;
+      }
+      /**
+       * Returns the accumulated win amount (as the bet multiplier) per spin type from all simulations.
+       */
+      getCumulativeWinsPerSpinType() {
+        return this.cumulativeWinsPerSpinType;
+      }
+      /**
+       * Returns the current win amount (as the bet multiplier) for the ongoing simulation.
+       */
+      getCurrentWin() {
+        return this.currentWin;
+      }
+      /**
+       * Returns the current spin win amount (as the bet multiplier) for the ongoing simulation.
+       */
+      getCurrentSpinWin() {
+        return this.currentSpinWin;
+      }
+      /**
+       * Returns the current tumble win amount (as the bet multiplier) for the ongoing simulation.
+       */
+      getCurrentTumbleWin() {
+        return this.currentTumbleWin;
+      }
+      /**
+       * Returns the current win amount (as the bet multiplier) per spin type for the ongoing simulation.
+       */
+      getCurrentWinPerSpinType() {
+        return this.currentWinPerSpinType;
+      }
+      /**
+       * Adds a win to `currentSpinWin` and `currentTumbleWin`.
+       *
+       * After each (free) spin, this amount should be added to `currentWinPerSpinType` via `confirmSpinWin()`
+       */
+      addTumbleWin(amount) {
+        this.currentTumbleWin += amount;
+        this.addSpinWin(amount);
+      }
+      /**
+       * Intended for internal use only.
+       * 
+       * Resets the current win amounts to zero.
+       */
+      resetCurrentWin() {
+        this.currentWin = 0;
+        this.currentSpinWin = 0;
+        this.currentTumbleWin = 0;
+        for (const spinType of Object.keys(this.currentWinPerSpinType)) {
+          this.currentWinPerSpinType[spinType] = 0;
+        }
+      }
+      /**
+       * Intended for internal use only.
+       * 
+       * Adds current wins to cumulative wins and resets current wins to zero.
+       */
+      confirmWins(ctx) {
+        function process2(number) {
+          return Math.round(Math.min(number, ctx.config.maxWinX) * 100) / 100;
+        }
+        this.currentWin = process2(this.currentWin);
+        this.cumulativeWins += this.currentWin;
+        let spinTypeWins = 0;
+        for (const spinType of Object.keys(this.currentWinPerSpinType)) {
+          const st = spinType;
+          const spinTypeWin = process2(this.currentWinPerSpinType[st]);
+          this.cumulativeWinsPerSpinType[st] += spinTypeWin;
+          spinTypeWins += spinTypeWin;
+        }
+        if (process2(spinTypeWins) !== this.currentWin) {
+          throw new Error(
+            `Inconsistent wallet state: currentWin (${this.currentWin}) does not equal spinTypeWins (${spinTypeWins}).`
+          );
+        }
+        this.resetCurrentWin();
+      }
+      /**
+       * Intended for internal use only.
+       *
+       * Transfers the win data from the given wallet to the calling book.
+       */
+      writePayoutToBook(ctx) {
+        function process2(number) {
+          return Math.round(Math.min(number, ctx.config.maxWinX) * 100) / 100;
+        }
+        const wallet = ctx.services.wallet._getWallet();
+        const book = ctx.services.data._getBook();
+        book.payout = Math.round(process2(wallet.getCurrentWin()) * 100);
+        book.basegameWins = process2(
+          wallet.getCurrentWinPerSpinType()[SPIN_TYPE.BASE_GAME] || 0
+        );
+        book.freespinsWins = process2(
+          wallet.getCurrentWinPerSpinType()[SPIN_TYPE.FREE_SPINS] || 0
+        );
+      }
+      /**
+       * Intended for internal use only.
+       */
+      serialize() {
+        return {
+          cumulativeWins: this.cumulativeWins,
+          cumulativeWinsPerSpinType: this.cumulativeWinsPerSpinType,
+          currentWin: this.currentWin,
+          currentWinPerSpinType: this.currentWinPerSpinType,
+          currentSpinWin: this.currentSpinWin,
+          currentTumbleWin: this.currentTumbleWin
+        };
+      }
+      /**
+       * Intended for internal use only.
+       */
+      merge(wallet) {
+        this.cumulativeWins += wallet.getCumulativeWins();
+        const otherWinsPerSpinType = wallet.getCumulativeWinsPerSpinType();
+        for (const spinType of Object.keys(this.cumulativeWinsPerSpinType)) {
+          this.cumulativeWinsPerSpinType[spinType] += otherWinsPerSpinType[spinType] || 0;
+        }
+      }
+      /**
+       * Intended for internal use only.
+       */
+      mergeSerialized(data) {
+        this.cumulativeWins += data.cumulativeWins;
+        for (const spinType of Object.keys(this.cumulativeWinsPerSpinType)) {
+          this.cumulativeWinsPerSpinType[spinType] += data.cumulativeWinsPerSpinType[spinType] || 0;
+        }
+        this.currentWin += data.currentWin;
+        this.currentSpinWin += data.currentSpinWin;
+        this.currentTumbleWin += data.currentTumbleWin;
+        for (const spinType of Object.keys(this.currentWinPerSpinType)) {
+          this.currentWinPerSpinType[spinType] += data.currentWinPerSpinType[spinType] || 0;
+        }
+      }
+    };
+    var import_promises = require("stream/promises");
+    var import_assert6 = __toESM(require("assert"));
+    function hashStringToInt(input) {
+      let h = 2166136261;
+      for (let i = 0; i < input.length; i++) {
+        h ^= input.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function splitCountsAcrossChunks(totalCounts, chunkSizes) {
+      const total = chunkSizes.reduce((a, b) => a + b, 0);
+      const allCriteria = Object.keys(totalCounts);
+      const totalCountsSum = allCriteria.reduce((s, c) => s + (totalCounts[c] ?? 0), 0);
+      (0, import_assert6.default)(
+        totalCountsSum === total,
+        `Counts (${totalCountsSum}) must match chunk total (${total}).`
+      );
+      const perChunk = chunkSizes.map(() => ({}));
+      for (const criteria of allCriteria) {
+        const count = totalCounts[criteria] ?? 0;
+        if (count <= 0) {
+          for (let i = 0; i < chunkSizes.length; i++) perChunk[i][criteria] = 0;
+          continue;
+        }
+        let chunks = chunkSizes.map((size) => count * size / total);
+        chunks = chunks.map((x) => Math.floor(x));
+        let assigned = chunks.reduce((a, b) => a + b, 0);
+        let remaining = count - assigned;
+        const remainders = chunks.map((x, i) => ({ i, r: x - Math.floor(x) })).sort((a, b) => b.r - a.r);
+        for (let i = 0; i < chunkSizes.length; i++) {
+          perChunk[i][criteria] = chunks[i];
+        }
+        let idx = 0;
+        while (remaining > 0) {
+          perChunk[remainders[idx].i][criteria] += 1;
+          remaining--;
+          idx = (idx + 1) % remainders.length;
+        }
+      }
+      const chunkTotals = () => perChunk.map((m) => Object.values(m).reduce((s, v) => s + v, 0));
+      let totals = chunkTotals();
+      const getDeficits = () => totals.map((t, i) => chunkSizes[i] - t);
+      let deficits = getDeficits();
+      for (let target = 0; target < chunkSizes.length; target++) {
+        while (deficits[target] > 0) {
+          const src = deficits.findIndex((d) => d < 0);
+          (0, import_assert6.default)(src !== -1, "No surplus chunk found, but deficits remain.");
+          const crit = allCriteria.find((c) => (perChunk[src][c] ?? 0) > 0);
+          (0, import_assert6.default)(crit, `No movable criteria found from surplus chunk ${src}.`);
+          perChunk[src][crit] -= 1;
+          perChunk[target][crit] = (perChunk[target][crit] ?? 0) + 1;
+          totals[src] -= 1;
+          totals[target] += 1;
+          deficits[src] += 1;
+          deficits[target] -= 1;
+        }
+      }
+      totals = chunkTotals();
+      for (let i = 0; i < chunkSizes.length; i++) {
+        (0, import_assert6.default)(
+          totals[i] === chunkSizes[i],
+          `Chunk ${i} size mismatch. Expected ${chunkSizes[i]}, got ${totals[i]}`
+        );
+      }
+      for (const c of allCriteria) {
+        const sum = perChunk.reduce((s, m) => s + (m[c] ?? 0), 0);
+        (0, import_assert6.default)(sum === (totalCounts[c] ?? 0), `Chunk split mismatch for criteria "${c}"`);
+      }
+      return perChunk;
+    }
+    function createCriteriaSampler(counts, seed) {
+      const rng = new RandomNumberGenerator();
+      rng.setSeed(seed);
+      const keys = Object.keys(counts).filter((k) => (counts[k] ?? 0) > 0);
+      const remaining = Object.fromEntries(keys.map((k) => [k, counts[k] ?? 0]));
+      let remainingTotal = Object.values(remaining).reduce((a, b) => a + b, 0);
+      return () => {
+        if (remainingTotal <= 0) return "N/A";
+        const roll = Math.min(
+          remainingTotal - Number.EPSILON,
+          rng.randomFloat(0, remainingTotal)
+        );
+        let acc = 0;
+        for (const k of keys) {
+          const w = remaining[k] ?? 0;
+          if (w <= 0) continue;
+          acc += w;
+          if (roll < acc) {
+            remaining[k] = w - 1;
+            remainingTotal--;
+            return k;
+          }
+        }
+        remainingTotal--;
+        return keys.find((k) => (remaining[k] ?? 0) > 0) ?? "N/A";
+      };
+    }
+    var completedSimulations = 0;
+    var TEMP_FILENAME = "__temp_compiled_src_IGNORE.js";
+    var TEMP_FOLDER = "temp_files";
+    var Simulation = class {
+      gameConfigOpts;
+      gameConfig;
+      simRunsAmount;
+      concurrency;
+      debug = false;
+      actualSims = 0;
+      wallet;
+      recordsWriteStream;
+      hasWrittenRecord = false;
+      streamHighWaterMark = 500 * 1024 * 1024;
+      maxPendingSims;
+      maxHighWaterMark;
+      PATHS = {};
+      // Worker related
+      credits = 0;
+      creditWaiters = [];
+      creditListenerInit = false;
+      constructor(opts, gameConfigOpts) {
+        this.gameConfig = createGameConfig(gameConfigOpts);
+        this.gameConfigOpts = gameConfigOpts;
+        this.simRunsAmount = opts.simRunsAmount || {};
+        this.concurrency = (opts.concurrency || 6) >= 2 ? opts.concurrency || 6 : 2;
+        this.wallet = new Wallet();
+        this.maxPendingSims = Math.max(10, opts.maxPendingSims ?? 250);
+        this.maxHighWaterMark = (opts.maxDiskBuffer ?? 50) * 1024 * 1024;
+        const gameModeKeys = Object.keys(this.gameConfig.gameModes);
+        (0, import_assert7.default)(
+          Object.values(this.gameConfig.gameModes).map((m) => gameModeKeys.includes(m.name)).every((v) => v === true),
+          "Game mode name must match its key in the gameModes object."
+        );
+        this.PATHS.base = import_path.default.join(this.gameConfig.rootDir, this.gameConfig.outputDir);
+        this.PATHS = {
+          ...this.PATHS,
+          books: (mode) => import_path.default.join(this.PATHS.base, `books_${mode}.jsonl`),
+          booksCompressed: (mode) => import_path.default.join(this.PATHS.base, "publish_files", `books_${mode}.jsonl.zst`),
+          tempBooks: (mode, i) => import_path.default.join(this.PATHS.base, TEMP_FOLDER, `temp_books_${mode}_${i}.jsonl`),
+          lookupTable: (mode) => import_path.default.join(this.PATHS.base, `lookUpTable_${mode}.csv`),
+          tempLookupTable: (mode, i) => import_path.default.join(this.PATHS.base, TEMP_FOLDER, `temp_lookup_${mode}_${i}.csv`),
+          lookupTableSegmented: (mode) => import_path.default.join(this.PATHS.base, `lookUpTableSegmented_${mode}.csv`),
+          tempLookupTableSegmented: (mode, i) => import_path.default.join(this.PATHS.base, TEMP_FOLDER, `temp_lookup_segmented_${mode}_${i}.csv`),
+          lookupTablePublish: (mode) => import_path.default.join(this.PATHS.base, "publish_files", `lookUpTable_${mode}_0.csv`),
+          tempRecords: (mode) => import_path.default.join(this.PATHS.base, TEMP_FOLDER, `temp_records_${mode}.jsonl`),
+          forceRecords: (mode) => import_path.default.join(this.PATHS.base, `force_record_${mode}.json`),
+          indexJson: import_path.default.join(this.PATHS.base, "publish_files", "index.json"),
+          optimizationFiles: import_path.default.join(this.PATHS.base, "optimization_files"),
+          publishFiles: import_path.default.join(this.PATHS.base, "publish_files")
+        };
+      }
+      async runSimulation(opts) {
+        const debug = opts.debug || false;
+        this.debug = debug;
+        const gameModesToSimulate = Object.keys(this.simRunsAmount);
+        const configuredGameModes = Object.keys(this.gameConfig.gameModes);
+        if (gameModesToSimulate.length === 0) {
+          throw new Error("No game modes configured for simulation.");
+        }
+        this.generateReelsetFiles();
+        if (import_worker_threads.isMainThread) {
+          this.preprocessFiles();
+          const debugDetails = {};
+          for (const mode of gameModesToSimulate) {
+            completedSimulations = 0;
+            this.wallet = new Wallet();
+            this.hasWrittenRecord = false;
+            debugDetails[mode] = {};
+            console.log(`
+Simulating game mode: ${mode}`);
+            console.time(mode);
+            const runs = this.simRunsAmount[mode] || 0;
+            if (runs <= 0) continue;
+            if (!configuredGameModes.includes(mode)) {
+              throw new Error(
+                `Tried to simulate game mode "${mode}", but it's not configured in the game config.`
+              );
+            }
+            const booksPath = this.PATHS.books(mode);
+            const tempRecordsPath = this.PATHS.tempRecords(mode);
+            createDirIfNotExists(this.PATHS.base);
+            createDirIfNotExists(import_path.default.join(this.PATHS.base, TEMP_FOLDER));
+            this.recordsWriteStream = import_fs2.default.createWriteStream(tempRecordsPath, {
+              highWaterMark: this.maxHighWaterMark
+            }).setMaxListeners(30);
+            const criteriaCounts = ResultSet.getNumberOfSimsForCriteria(this, mode);
+            const totalSims = Object.values(criteriaCounts).reduce((a, b) => a + b, 0);
+            (0, import_assert7.default)(
+              totalSims === runs,
+              `Criteria mismatch for mode "${mode}". Expected ${runs}, got ${totalSims}`
+            );
+            const chunks = this.getSimRangesForChunks(totalSims, this.concurrency);
+            const chunkSizes = chunks.map(([s, e]) => Math.max(0, e - s + 1));
+            const chunkCriteriaCounts = splitCountsAcrossChunks(criteriaCounts, chunkSizes);
+            await this.spawnWorkersForGameMode({
+              mode,
+              chunks,
+              chunkCriteriaCounts,
+              totalSims
+            });
+            createDirIfNotExists(this.PATHS.optimizationFiles);
+            createDirIfNotExists(this.PATHS.publishFiles);
+            console.log(
+              `Writing final files for game mode "${mode}". This may take a while...`
+            );
+            try {
+              const finalBookStream = import_fs2.default.createWriteStream(booksPath, {
+                highWaterMark: this.streamHighWaterMark
+              });
+              let isFirstChunk = true;
+              for (let i = 0; i < chunks.length; i++) {
+                const tempBookPath = this.PATHS.tempBooks(mode, i);
+                if (import_fs2.default.existsSync(tempBookPath)) {
+                  if (!isFirstChunk) {
+                    if (!finalBookStream.write("\n")) {
+                      await new Promise((r) => finalBookStream.once("drain", r));
+                    }
+                  }
+                  const content = import_fs2.default.createReadStream(tempBookPath);
+                  for await (const chunk of content) {
+                    if (!finalBookStream.write(chunk)) {
+                      await new Promise((r) => finalBookStream.once("drain", r));
+                    }
+                  }
+                  import_fs2.default.rmSync(tempBookPath);
+                  isFirstChunk = false;
+                }
+              }
+              finalBookStream.end();
+              await new Promise((resolve) => finalBookStream.on("finish", resolve));
+            } catch (error) {
+              throw new Error(`Error merging book files: ${error.message}`);
+            }
+            const lutPath = this.PATHS.lookupTable(mode);
+            const lutPathPublish = this.PATHS.lookupTablePublish(mode);
+            const lutSegmentedPath = this.PATHS.lookupTableSegmented(mode);
+            await this.mergeCsv(chunks, lutPath, (i) => `temp_lookup_${mode}_${i}.csv`);
+            import_fs2.default.copyFileSync(lutPath, lutPathPublish);
+            await this.mergeCsv(
+              chunks,
+              lutSegmentedPath,
+              (i) => `temp_lookup_segmented_${mode}_${i}.csv`
+            );
+            if (this.recordsWriteStream) {
+              await new Promise((resolve) => {
+                this.recordsWriteStream.end(() => {
+                  resolve();
+                });
+              });
+              this.recordsWriteStream = void 0;
+            }
+            await this.writeRecords(mode);
+            await this.writeBooksJson(mode);
+            this.writeIndexJson();
+            console.log(`Mode ${mode} done!`);
+            debugDetails[mode].rtp = round(
+              this.wallet.getCumulativeWins() / (runs * this.gameConfig.gameModes[mode].cost),
+              3
+            );
+            debugDetails[mode].wins = round(this.wallet.getCumulativeWins(), 3);
+            debugDetails[mode].winsPerSpinType = Object.fromEntries(
+              Object.entries(this.wallet.getCumulativeWinsPerSpinType()).map(([k, v]) => [
+                k,
+                round(v, 3)
+              ])
+            );
+            console.timeEnd(mode);
+          }
+          console.log("\n=== SIMULATION SUMMARY ===");
+          console.table(debugDetails);
+        }
+        let desiredSims = 0;
+        let actualSims = 0;
+        const criteriaToRetries = {};
+        if (!import_worker_threads.isMainThread) {
+          const { mode, simStart, simEnd, index, criteriaCounts } = import_worker_threads.workerData;
+          const seed = hashStringToInt(mode) + index >>> 0;
+          const nextCriteria = createCriteriaSampler(criteriaCounts, seed);
+          for (let simId = simStart; simId <= simEnd; simId++) {
+            if (this.debug) desiredSims++;
+            const criteria = nextCriteria();
+            if (!criteriaToRetries[criteria]) criteriaToRetries[criteria] = 0;
+            await this.acquireCredit();
+            this.runSingleSimulation({ simId, mode, criteria, index });
+            if (this.debug) {
+              criteriaToRetries[criteria] += this.actualSims - 1;
+              actualSims += this.actualSims;
+            }
+          }
+          if (this.debug) {
+            console.log(`Desired ${desiredSims}, Actual ${actualSims}`);
+            console.log(`Retries per criteria:`, criteriaToRetries);
+          }
+          import_worker_threads.parentPort?.postMessage({
+            type: "done",
+            workerNum: index
+          });
+          import_worker_threads.parentPort?.removeAllListeners();
+          import_worker_threads.parentPort?.close();
+        }
+      }
+      /**
+       * Runs all simulations for a specific game mode.
+       */
+      async spawnWorkersForGameMode(opts) {
+        const { mode, chunks, chunkCriteriaCounts, totalSims } = opts;
+        await Promise.all(
+          chunks.map(([simStart, simEnd], index) => {
+            return this.callWorker({
+              basePath: this.PATHS.base,
+              mode,
+              simStart,
+              simEnd,
+              index,
+              totalSims,
+              criteriaCounts: chunkCriteriaCounts[index]
+            });
+          })
+        );
+      }
+      async callWorker(opts) {
+        const { mode, simEnd, simStart, basePath, index, totalSims, criteriaCounts } = opts;
+        function logArrowProgress(current, total) {
+          const percentage = current / total * 100;
+          const progressBarLength = 50;
+          const filledLength = Math.round(progressBarLength * current / total);
+          const bar = "\u2588".repeat(filledLength) + "-".repeat(progressBarLength - filledLength);
+          process.stdout.write(`\r[${bar}] ${percentage.toFixed(2)}%   (${current}/${total})`);
+          if (current === total) {
+            process.stdout.write("\n");
+          }
+        }
+        const write = async (stream, chunk) => {
+          if (!stream.write(chunk)) {
+            await new Promise((resolve) => stream.once("drain", resolve));
+          }
+        };
+        return new Promise((resolve, reject) => {
+          const scriptPath = import_path.default.join(basePath, TEMP_FILENAME);
+          const worker = new import_worker_threads.Worker(scriptPath, {
+            workerData: {
+              mode,
+              simStart,
+              simEnd,
+              index,
+              criteriaCounts
+            }
+          });
+          worker.postMessage({ type: "credit", amount: this.maxPendingSims });
+          const tempBookPath = this.PATHS.tempBooks(mode, index);
+          const bookStream = import_fs2.default.createWriteStream(tempBookPath, {
+            highWaterMark: this.maxHighWaterMark
+          });
+          const tempLookupPath = this.PATHS.tempLookupTable(mode, index);
+          const lookupStream = import_fs2.default.createWriteStream(tempLookupPath, {
+            highWaterMark: this.maxHighWaterMark
+          });
+          const tempLookupSegPath = this.PATHS.tempLookupTableSegmented(mode, index);
+          const lookupSegmentedStream = import_fs2.default.createWriteStream(tempLookupSegPath, {
+            highWaterMark: this.maxHighWaterMark
+          });
+          let writeChain = Promise.resolve();
+          worker.on("message", (msg) => {
+            if (msg.type === "log") {
+              return;
+            }
+            if (msg.type === "complete") {
+              writeChain = writeChain.then(async () => {
+                completedSimulations++;
+                if (completedSimulations % 250 === 0) {
+                  logArrowProgress(completedSimulations, totalSims);
+                }
+                const book = msg.book;
+                const bookData = {
+                  id: book.id,
+                  payoutMultiplier: book.payout,
+                  events: book.events
+                };
+                const prefix = book.id === simStart ? "" : "\n";
+                await write(bookStream, prefix + JSONL.stringify([bookData]));
+                await write(lookupStream, `${book.id},1,${Math.round(book.payout)}
+`);
+                await write(
+                  lookupSegmentedStream,
+                  `${book.id},${book.criteria},${book.basegameWins},${book.freespinsWins}
+`
+                );
+                if (this.recordsWriteStream) {
+                  for (const record of msg.records) {
+                    const recordPrefix = this.hasWrittenRecord ? "\n" : "";
+                    await write(
+                      this.recordsWriteStream,
+                      recordPrefix + JSONL.stringify([record])
+                    );
+                    this.hasWrittenRecord = true;
+                  }
+                }
+                this.wallet.mergeSerialized(msg.wallet);
+                worker.postMessage({ type: "credit", amount: 1 });
+              }).catch(reject);
+              return;
+            }
+            if (msg.type === "done") {
+              writeChain.then(async () => {
+                bookStream.end();
+                lookupStream.end();
+                lookupSegmentedStream.end();
+                await Promise.all([
+                  new Promise((r) => bookStream.on("finish", () => r())),
+                  new Promise((r) => lookupStream.on("finish", () => r())),
+                  new Promise((r) => lookupSegmentedStream.on("finish", () => r()))
+                ]);
+                resolve(true);
+              }).catch(reject);
+              return;
+            }
+          });
+          worker.on("error", (error) => {
+            process.stdout.write(`
+${error.message}
+`);
+            process.stdout.write(`
+${error.stack}
+`);
+            reject(error);
+          });
+          worker.on("exit", (code) => {
+            if (code !== 0) {
+              reject(new Error(`Worker stopped with exit code ${code}`));
+            }
+          });
+        });
+      }
+      /**
+       * Will run a single simulation until the specified criteria is met.
+       */
+      runSingleSimulation(opts) {
+        const { simId, mode, criteria } = opts;
+        const ctx = createGameContext({
+          config: this.gameConfig
+        });
+        ctx.state.currentGameMode = mode;
+        ctx.state.currentSimulationId = simId;
+        ctx.state.isCriteriaMet = false;
+        const resultSet = ctx.services.game.getResultSetByCriteria(
+          ctx.state.currentGameMode,
+          criteria
+        );
+        ctx.state.currentResultSet = resultSet;
+        while (!ctx.state.isCriteriaMet) {
+          this.actualSims++;
+          this.resetSimulation(ctx);
+          this.handleGameFlow(ctx);
+          if (resultSet.meetsCriteria(ctx)) {
+            ctx.state.isCriteriaMet = true;
+          }
+        }
+        ctx.services.wallet._getWallet().writePayoutToBook(ctx);
+        ctx.services.wallet._getWallet().confirmWins(ctx);
+        if (ctx.services.data._getBook().payout >= ctx.config.maxWinX) {
+          ctx.state.triggeredMaxWin = true;
+        }
+        ctx.services.data.record({
+          criteria: resultSet.criteria
+        });
+        ctx.config.hooks.onSimulationAccepted?.(ctx);
+        this.confirmRecords(ctx);
+        import_worker_threads.parentPort?.postMessage({
+          type: "complete",
+          simId,
+          book: ctx.services.data._getBook().serialize(),
+          wallet: ctx.services.wallet._getWallet().serialize(),
+          records: ctx.services.data._getRecords()
+        });
+      }
+      initCreditListener() {
+        if (this.creditListenerInit) return;
+        this.creditListenerInit = true;
+        import_worker_threads.parentPort?.on("message", (msg) => {
+          if (msg?.type !== "credit") return;
+          const amount = Number(msg?.amount ?? 0);
+          if (!Number.isFinite(amount) || amount <= 0) return;
+          this.credits += amount;
+          while (this.credits > 0 && this.creditWaiters.length > 0) {
+            this.credits -= 1;
+            const resolve = this.creditWaiters.shift();
+            resolve();
+          }
+        });
+      }
+      acquireCredit() {
+        this.initCreditListener();
+        if (this.credits > 0) {
+          this.credits -= 1;
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          this.creditWaiters.push(resolve);
+        });
+      }
+      /**
+       * If a simulation does not meet the required criteria, reset the state to run it again.
+       *
+       * This also runs once before each simulation to ensure a clean state.
+       */
+      resetSimulation(ctx) {
+        this.resetState(ctx);
+        ctx.services.board.resetBoard();
+        ctx.services.data._setRecorder(new Recorder());
+        ctx.services.wallet._setWallet(new Wallet());
+        ctx.services.data._setBook(
+          new Book({
+            id: ctx.state.currentSimulationId,
+            criteria: ctx.state.currentResultSet.criteria
+          })
+        );
+        Object.values(ctx.config.gameModes).forEach((mode) => {
+          mode._resetTempValues();
+        });
+      }
+      resetState(ctx) {
+        ctx.services.rng.setSeedIfDifferent(ctx.state.currentSimulationId);
+        ctx.state.currentSpinType = SPIN_TYPE.BASE_GAME;
+        ctx.state.currentFreespinAmount = 0;
+        ctx.state.totalFreespinAmount = 0;
+        ctx.state.triggeredMaxWin = false;
+        ctx.state.triggeredFreespins = false;
+        ctx.state.userData = copy(ctx.config.userState);
+      }
+      /**
+       * Contains and executes the entire game logic:
+       * - Drawing the board
+       * - Evaluating wins
+       * - Updating wallet
+       * - Handling free spins
+       * - Recording events
+       *
+       * You can customize the game flow by implementing the `onHandleGameFlow` hook in the game configuration.
+       */
+      handleGameFlow(ctx) {
+        this.gameConfig.hooks.onHandleGameFlow(ctx);
+      }
+      async writeRecords(mode) {
+        const tempRecordsPath = this.PATHS.tempRecords(mode);
+        const forceRecordsPath = this.PATHS.forceRecords(mode);
+        const aggregatedRecords = /* @__PURE__ */ new Map();
+        if (import_fs2.default.existsSync(tempRecordsPath)) {
+          const fileStream = import_fs2.default.createReadStream(tempRecordsPath, {
+            highWaterMark: this.streamHighWaterMark
+          });
+          const rl = import_readline2.default.createInterface({
+            input: fileStream,
+            crlfDelay: Infinity
+          });
+          for await (const line of rl) {
+            if (line.trim() === "") continue;
+            const record = JSON.parse(line);
+            const key = JSON.stringify(record.search);
+            let existing = aggregatedRecords.get(key);
+            if (!existing) {
+              existing = {
+                search: record.search,
+                timesTriggered: 0,
+                bookIds: []
+              };
+              aggregatedRecords.set(key, existing);
+            }
+            existing.timesTriggered += record.timesTriggered;
+            for (const bookId of record.bookIds) {
+              existing.bookIds.push(bookId);
+            }
+          }
+        }
+        import_fs2.default.rmSync(forceRecordsPath, { force: true });
+        const writeStream = import_fs2.default.createWriteStream(forceRecordsPath, { encoding: "utf-8" });
+        writeStream.write("[\n");
+        let isFirst = true;
+        for (const record of aggregatedRecords.values()) {
+          if (!isFirst) {
+            writeStream.write(",\n");
+          }
+          writeStream.write(JSON.stringify(record));
+          isFirst = false;
+        }
+        writeStream.write("\n]");
+        writeStream.end();
+        await new Promise((resolve) => {
+          writeStream.on("finish", () => resolve());
+        });
+        import_fs2.default.rmSync(tempRecordsPath, { force: true });
+      }
+      writeIndexJson() {
+        const outputFilePath = this.PATHS.indexJson;
+        const modes = Object.keys(this.simRunsAmount).map((id) => {
+          const mode = this.gameConfig.gameModes[id];
+          (0, import_assert7.default)(mode, `Game mode "${id}" not found in game config.`);
+          return {
+            name: mode.name,
+            cost: mode.cost,
+            events: `books_${mode.name}.jsonl.zst`,
+            weights: `lookUpTable_${mode.name}_0.csv`
+          };
+        });
+        writeFile(outputFilePath, JSON.stringify({ modes }, null, 2));
+      }
+      async writeBooksJson(gameMode) {
+        const outputFilePath = this.PATHS.books(gameMode);
+        const compressedFilePath = this.PATHS.booksCompressed(gameMode);
+        import_fs2.default.rmSync(compressedFilePath, { force: true });
+        if (import_fs2.default.existsSync(outputFilePath)) {
+          await (0, import_promises.pipeline)(
+            import_fs2.default.createReadStream(outputFilePath),
+            import_zlib.default.createZstdCompress(),
+            import_fs2.default.createWriteStream(compressedFilePath)
+          );
+        }
+      }
+      /**
+       * Compiles user configured game to JS for use in different Node processes
+       */
+      preprocessFiles() {
+        const builtFilePath = import_path.default.join(
+          this.gameConfig.rootDir,
+          this.gameConfig.outputDir,
+          TEMP_FILENAME
+        );
+        import_fs2.default.rmSync(builtFilePath, { force: true });
+        (0, import_esbuild.buildSync)({
+          entryPoints: [this.gameConfig.rootDir],
+          bundle: true,
+          platform: "node",
+          outfile: import_path.default.join(
+            this.gameConfig.rootDir,
+            this.gameConfig.outputDir,
+            TEMP_FILENAME
+          ),
+          external: ["esbuild"]
+        });
+      }
+      getSimRangesForChunks(total, chunks) {
+        const realChunks = Math.min(chunks, Math.max(total, 1));
+        const base = Math.floor(total / realChunks);
+        const remainder = total % realChunks;
+        const result = [];
+        let current = 1;
+        for (let i = 0; i < realChunks; i++) {
+          const size = base + (i < remainder ? 1 : 0);
+          const start = current;
+          const end = current + size - 1;
+          result.push([start, end]);
+          current = end + 1;
+        }
+        return result;
+      }
+      /**
+       * Generates reelset CSV files for all game modes.
+       */
+      generateReelsetFiles() {
+        for (const mode of Object.values(this.gameConfig.gameModes)) {
+          if (mode.reelSets && mode.reelSets.length > 0) {
+            for (const reelSet of Object.values(mode.reelSets)) {
+              reelSet.associatedGameModeName = mode.name;
+              reelSet.generateReels(this.gameConfig);
+            }
+          } else {
+            throw new Error(
+              `Game mode "${mode.name}" has no reel sets defined. Cannot generate reelset files.`
+            );
+          }
+        }
+      }
+      async mergeCsv(chunks, outPath, tempName) {
+        try {
+          import_fs2.default.rmSync(outPath, { force: true });
+          const out = import_fs2.default.createWriteStream(outPath, {
+            highWaterMark: this.streamHighWaterMark
+          });
+          for (let i = 0; i < chunks.length; i++) {
+            const p = import_path.default.join(this.PATHS.base, TEMP_FOLDER, tempName(i));
+            if (!import_fs2.default.existsSync(p)) continue;
+            const rs = import_fs2.default.createReadStream(p, {
+              highWaterMark: this.streamHighWaterMark
+            });
+            for await (const buf of rs) {
+              if (!out.write(buf)) {
+                await new Promise((resolve) => out.once("drain", resolve));
+              }
+            }
+            import_fs2.default.rmSync(p);
+          }
+          out.end();
+          await new Promise((resolve) => out.on("finish", resolve));
+        } catch (error) {
+          throw new Error(`Error merging CSV files: ${error.message}`);
+        }
+      }
+      /**
+       * Confirms all pending records and adds them to the main records list.
+       */
+      confirmRecords(ctx) {
+        const recorder = ctx.services.data._getRecorder();
+        for (const pendingRecord of recorder.pendingRecords) {
+          const search = Object.entries(pendingRecord.properties).map(([name, value]) => ({ name, value })).sort((a, b) => a.name.localeCompare(b.name));
+          let record = recorder.records.find((r) => {
+            if (r.search.length !== search.length) return false;
+            for (let i = 0; i < r.search.length; i++) {
+              if (r.search[i].name !== search[i].name) return false;
+              if (r.search[i].value !== search[i].value) return false;
+            }
+            return true;
+          });
+          if (!record) {
+            record = {
+              search,
+              timesTriggered: 0,
+              bookIds: []
+            };
+            recorder.records.push(record);
+          }
+          record.timesTriggered++;
+          if (!record.bookIds.includes(pendingRecord.bookId)) {
+            record.bookIds.push(pendingRecord.bookId);
+          }
+        }
+        recorder.pendingRecords = [];
+      }
+    };
+    var import_fs3 = __toESM(require("fs"));
+    var import_path2 = __toESM(require("path"));
+    var import_assert8 = __toESM(require("assert"));
+    function parseLookupTable(content) {
+      const lines = content.trim().split("\n");
+      const lut = [];
+      for (const line of lines) {
+        const [indexStr, weightStr, payoutStr] = line.split(",");
+        const index = parseInt(indexStr.trim());
+        const weight = parseInt(weightStr.trim());
+        const payout = parseFloat(payoutStr.trim());
+        lut.push([index, weight, payout]);
+      }
+      return lut;
+    }
+    function parseLookupTableSegmented(content) {
+      const lines = content.trim().split("\n");
+      const lut = [];
+      for (const line of lines) {
+        const [indexStr, criteria, weightStr, payoutStr] = line.split(",");
+        const index = parseInt(indexStr.trim());
+        const weight = parseInt(weightStr.trim());
+        const payout = parseFloat(payoutStr.trim());
+        lut.push([index, criteria, weight, payout]);
+      }
+      return lut;
+    }
+    function getTotalLutWeight(lut) {
+      return lut.reduce((sum, [, weight]) => sum + weight, 0);
+    }
+    function getTotalWeight(payoutWeights) {
+      return Object.values(payoutWeights).reduce((sum, w) => sum + w, 0);
+    }
+    function getPayoutWeights(lut, opts = {}) {
+      const { normalize = true } = opts;
+      const totalWeight = getTotalLutWeight(lut);
+      let payoutWeights = {};
+      for (const [, weight, p] of lut) {
+        const payout = p / 100;
+        if (payoutWeights[payout] === void 0) {
+          payoutWeights[payout] = 0;
+        }
+        payoutWeights[payout] += weight;
+      }
+      payoutWeights = Object.fromEntries(
+        Object.entries(payoutWeights).sort(([a], [b]) => parseFloat(a) - parseFloat(b))
+      );
+      if (normalize) {
+        for (const payout in payoutWeights) {
+          payoutWeights[payout] /= totalWeight;
+        }
+      }
+      return payoutWeights;
+    }
+    function getNonZeroHitrate(payoutWeights) {
+      const totalWeight = getTotalWeight(payoutWeights);
+      if (Math.min(...Object.keys(payoutWeights).map(Number)) == 0) {
+        return totalWeight / (totalWeight - (payoutWeights[0] ?? 0) / totalWeight);
+      } else {
+        return 1;
+      }
+    }
+    function getNullHitrate(payoutWeights) {
+      return payoutWeights[0] ?? 0;
+    }
+    function getMaxwinHitrate(payoutWeights) {
+      const totalWeight = getTotalWeight(payoutWeights);
+      const maxWin = Math.max(...Object.keys(payoutWeights).map(Number));
+      const hitRate = (payoutWeights[maxWin] || 0) / totalWeight;
+      return 1 / hitRate;
+    }
+    function getUniquePayouts(payoutWeights) {
+      return Object.keys(payoutWeights).length;
+    }
+    function getMinWin(payoutWeights) {
+      const payouts = Object.keys(payoutWeights).map(Number);
+      return Math.min(...payouts);
+    }
+    function getMaxWin(payoutWeights) {
+      const payouts = Object.keys(payoutWeights).map(Number);
+      return Math.max(...payouts);
+    }
+    function getAvgWin(payoutWeights) {
+      let avgWin = 0;
+      for (const [payoutStr, weight] of Object.entries(payoutWeights)) {
+        const payout = parseFloat(payoutStr);
+        avgWin += payout * weight;
+      }
+      return avgWin;
+    }
+    function getRtp(payoutWeights, cost) {
+      const avgWin = getAvgWin(payoutWeights);
+      return avgWin / cost;
+    }
+    function getStandardDeviation(payoutWeights) {
+      const variance = getVariance(payoutWeights);
+      return Math.sqrt(variance);
+    }
+    function getVariance(payoutWeights) {
+      const totalWeight = getTotalWeight(payoutWeights);
+      const avgWin = getAvgWin(payoutWeights);
+      let variance = 0;
+      for (const [payoutStr, weight] of Object.entries(payoutWeights)) {
+        const payout = parseFloat(payoutStr);
+        variance += Math.pow(payout - avgWin, 2) * (weight / totalWeight);
+      }
+      return variance;
+    }
+    function getLessBetHitrate(payoutWeights, cost) {
+      let lessBetWeight = 0;
+      const totalWeight = getTotalWeight(payoutWeights);
+      for (const [payoutStr, weight] of Object.entries(payoutWeights)) {
+        const payout = parseFloat(payoutStr);
+        if (payout < cost) {
+          lessBetWeight += weight;
+        }
+      }
+      return lessBetWeight / totalWeight;
+    }
+    var import_worker_threads2 = require("worker_threads");
+    var Analysis = class {
+      gameConfig;
+      optimizerConfig;
+      filePaths;
+      constructor(optimizer) {
+        this.gameConfig = optimizer.getGameConfig();
+        this.optimizerConfig = optimizer.getOptimizerGameModes();
+        this.filePaths = {};
+      }
+      async runAnalysis(gameModes) {
+        if (!import_worker_threads2.isMainThread) return;
+        this.filePaths = this.getPathsForModes(gameModes);
+        this.getNumberStats(gameModes);
+        this.getWinRanges(gameModes);
+        console.log("Analysis complete. Files written to build directory.");
+      }
+      getPathsForModes(gameModes) {
+        const rootPath = this.gameConfig.rootDir;
+        const paths = {};
+        for (const modeStr of gameModes) {
+          const lut = import_path2.default.join(
+            rootPath,
+            this.gameConfig.outputDir,
+            `lookUpTable_${modeStr}.csv`
+          );
+          const lutSegmented = import_path2.default.join(
+            rootPath,
+            this.gameConfig.outputDir,
+            `lookUpTableSegmented_${modeStr}.csv`
+          );
+          const lutOptimized = import_path2.default.join(
+            rootPath,
+            this.gameConfig.outputDir,
+            "publish_files",
+            `lookUpTable_${modeStr}_0.csv`
+          );
+          const booksJsonl = import_path2.default.join(
+            rootPath,
+            this.gameConfig.outputDir,
+            `books_${modeStr}.jsonl`
+          );
+          const booksJsonlCompressed = import_path2.default.join(
+            rootPath,
+            this.gameConfig.outputDir,
+            "publish_files",
+            `books_${modeStr}.jsonl.zst`
+          );
+          paths[modeStr] = {
+            lut,
+            lutSegmented,
+            lutOptimized,
+            booksJsonl,
+            booksJsonlCompressed
+          };
+          for (const p of Object.values(paths[modeStr])) {
+            (0, import_assert8.default)(
+              import_fs3.default.existsSync(p),
+              `File "${p}" does not exist. Run optimization to auto-create it.`
+            );
+          }
+        }
+        return paths;
+      }
+      getNumberStats(gameModes) {
+        const stats = [];
+        for (const modeStr of gameModes) {
+          const mode = this.getGameModeConfig(modeStr);
+          const lutOptimized = parseLookupTable(
+            import_fs3.default.readFileSync(this.filePaths[modeStr].lutOptimized, "utf-8")
+          );
+          const totalWeight = getTotalLutWeight(lutOptimized);
+          const payoutWeights = getPayoutWeights(lutOptimized);
+          stats.push({
+            gameMode: mode.name,
+            totalWeight,
+            avgWin: getAvgWin(payoutWeights),
+            rtp: getRtp(payoutWeights, mode.cost),
+            minWin: getMinWin(payoutWeights),
+            maxWin: getMaxWin(payoutWeights),
+            stdDev: getStandardDeviation(payoutWeights),
+            variance: getVariance(payoutWeights),
+            nonZeroHitRate: getNonZeroHitrate(payoutWeights),
+            nullHitRate: getNullHitrate(payoutWeights),
+            maxwinHitRate: getMaxwinHitrate(payoutWeights),
+            lessBetHitRate: getLessBetHitrate(payoutWeights, mode.cost),
+            uniquePayouts: getUniquePayouts(payoutWeights)
+          });
+        }
+        writeJsonFile(
+          import_path2.default.join(this.gameConfig.rootDir, this.gameConfig.outputDir, "stats_summary.json"),
+          stats
+        );
+      }
+      getWinRanges(gameModes) {
+        const winRanges = [
+          [0, 0.1],
+          [0, 0.99],
+          [1, 1.99],
+          [2, 2.99],
+          [3, 4.99],
+          [5, 9.99],
+          [10, 19.99],
+          [20, 49.99],
+          [50, 99.99],
+          [100, 199.99],
+          [200, 499.99],
+          [500, 999.99],
+          [1e3, 1999.99],
+          [2e3, 2999.99],
+          [3e3, 4999.99],
+          [5e3, 7499.99],
+          [7500, 9999.99],
+          [1e4, 14999.99],
+          [15e3, 19999.99],
+          [2e4, 24999.99]
+        ];
+        const payoutRanges = {};
+        for (const modeStr of gameModes) {
+          payoutRanges[modeStr] = { overall: {}, criteria: {} };
+          const lutSegmented = parseLookupTableSegmented(
+            import_fs3.default.readFileSync(this.filePaths[modeStr].lutSegmented, "utf-8")
+          );
+          lutSegmented.forEach(([, criteria, bp, fsp]) => {
+            const basePayout = bp;
+            const freeSpinPayout = fsp;
+            const payout = basePayout + freeSpinPayout;
+            for (const [min, max] of winRanges) {
+              if (payout >= min && payout <= max) {
+                const rangeKey = `${min}-${max}`;
+                if (!payoutRanges[modeStr].overall[rangeKey]) {
+                  payoutRanges[modeStr].overall[rangeKey] = 0;
+                }
+                payoutRanges[modeStr].overall[rangeKey] += 1;
+                if (!payoutRanges[modeStr].criteria[criteria]) {
+                  payoutRanges[modeStr].criteria[criteria] = {};
+                }
+                if (!payoutRanges[modeStr].criteria[criteria][rangeKey]) {
+                  payoutRanges[modeStr].criteria[criteria][rangeKey] = 0;
+                }
+                payoutRanges[modeStr].criteria[criteria][rangeKey] += 1;
+                break;
+              }
+            }
+          });
+          const orderedOverall = {};
+          Object.keys(payoutRanges[modeStr].overall).sort((a, b) => {
+            const [aMin] = a.split("-").map(Number);
+            const [bMin] = b.split("-").map(Number);
+            return aMin - bMin;
+          }).forEach((key) => {
+            orderedOverall[key] = payoutRanges[modeStr].overall[key];
+          });
+          const orderedCriteria = {};
+          Object.keys(payoutRanges[modeStr].criteria).forEach((crit) => {
+            const critMap = payoutRanges[modeStr].criteria[crit];
+            const orderedCritMap = {};
+            Object.keys(critMap).sort((a, b) => {
+              const [aMin] = a.split("-").map(Number);
+              const [bMin] = b.split("-").map(Number);
+              return aMin - bMin;
+            }).forEach((key) => {
+              orderedCritMap[key] = critMap[key];
+            });
+            orderedCriteria[crit] = orderedCritMap;
+          });
+          payoutRanges[modeStr] = {
+            overall: orderedOverall,
+            criteria: {}
+          };
+        }
+        writeJsonFile(
+          import_path2.default.join(this.gameConfig.rootDir, this.gameConfig.outputDir, "stats_payouts.json"),
+          payoutRanges
+        );
+      }
+      getGameModeConfig(mode) {
+        const config = this.gameConfig.gameModes[mode];
+        (0, import_assert8.default)(config, `Game mode "${mode}" not found in game config`);
+        return config;
+      }
+    };
+    var import_path5 = __toESM(require("path"));
+    var import_assert10 = __toESM(require("assert"));
+    var import_child_process = require("child_process");
+    var import_worker_threads3 = require("worker_threads");
+    var import_path3 = __toESM(require("path"));
+    function makeMathConfig(optimizer, opts = {}) {
+      const game = optimizer.getGameConfig();
+      const gameModesCfg = optimizer.getOptimizerGameModes();
+      const { writeToFile } = opts;
+      const isDefined = (v) => v !== void 0;
+      const config = {
+        game_id: game.id,
+        bet_modes: Object.entries(game.gameModes).map(([key, mode]) => ({
+          bet_mode: mode.name,
+          cost: mode.cost,
+          rtp: mode.rtp,
+          max_win: game.maxWinX
+        })),
+        fences: Object.entries(gameModesCfg).map(([gameModeName, modeCfg]) => ({
+          bet_mode: gameModeName,
+          fences: Object.entries(modeCfg.conditions).map(([fenceName, fence]) => ({
+            name: fenceName,
+            avg_win: isDefined(fence.getAvgWin()) ? fence.getAvgWin().toString() : void 0,
+            hr: isDefined(fence.getHitRate()) ? fence.getHitRate().toString() : void 0,
+            rtp: isDefined(fence.getRtp()) ? fence.getRtp().toString() : void 0,
+            identity_condition: {
+              search: Object.entries(fence.getForceSearch()).map(([k, v]) => ({
+                name: k,
+                value: v
+              })),
+              win_range_start: fence.getSearchRange()[0],
+              win_range_end: fence.getSearchRange()[1],
+              opposite: false
+            },
+            priority: fence.priority
+          })).sort((a, b) => b.priority - a.priority)
+        })),
+        dresses: Object.entries(gameModesCfg).flatMap(([gameModeName, modeCfg]) => ({
+          bet_mode: gameModeName,
+          dresses: modeCfg.scaling.getConfig().map((s) => ({
+            fence: s.criteria,
+            scale_factor: s.scaleFactor.toString(),
+            identity_condition_win_range: s.winRange,
+            prob: s.probability
+          }))
+        }))
+      };
+      if (writeToFile) {
+        const outPath = import_path3.default.join(game.rootDir, game.outputDir, "math_config.json");
+        writeJsonFile(outPath, config);
+      }
+      return config;
+    }
+    var import_path4 = __toESM(require("path"));
+    function makeSetupFile(optimizer, gameMode) {
+      const gameConfig = optimizer.getGameConfig();
+      const optimizerGameModes = optimizer.getOptimizerGameModes();
+      const modeConfig = optimizerGameModes[gameMode];
+      if (!modeConfig) {
+        throw new Error(`Game mode "${gameMode}" not found in optimizer configuration.`);
+      }
+      const params = modeConfig.parameters.getParameters();
+      let content = "";
+      content += `game_name;${gameConfig.id}
+`;
+      content += `bet_type;${gameMode}
+`;
+      content += `num_show_pigs;${params.numShowPigs}
+`;
+      content += `num_pigs_per_fence;${params.numPigsPerFence}
+`;
+      content += `threads_for_fence_construction;${params.threadsFenceConstruction}
+`;
+      content += `threads_for_show_construction;${params.threadsShowConstruction}
+`;
+      content += `score_type;${params.scoreType}
+`;
+      content += `test_spins;${JSON.stringify(params.testSpins)}
+`;
+      content += `test_spins_weights;${JSON.stringify(params.testSpinsWeights)}
+`;
+      content += `simulation_trials;${params.simulationTrials}
+`;
+      content += `graph_indexes;0
+`;
+      content += `run_1000_batch;False
+`;
+      content += `simulation_trials;${params.simulationTrials}
+`;
+      content += `user_game_build_path;${import_path4.default.join(gameConfig.rootDir, gameConfig.outputDir)}
+`;
+      content += `pmb_rtp;${params.pmbRtp}
+`;
+      const outPath = import_path4.default.join(__dirname, "./optimizer-rust/src", "setup.txt");
+      writeFile(outPath, content);
+    }
+    var import_assert9 = __toESM(require("assert"));
+    var OptimizationConditions = class {
+      rtp;
+      avgWin;
+      hitRate;
+      searchRange;
+      forceSearch;
+      priority;
+      constructor(opts) {
+        let { rtp, avgWin, hitRate, searchConditions, priority } = opts;
+        if (rtp == void 0 || rtp === "x") {
+          (0, import_assert9.default)(avgWin !== void 0 && hitRate !== void 0, "If RTP is not specified, hit-rate (hr) and average win amount (av_win) must be given.");
+          rtp = Math.round(avgWin / Number(hitRate) * 1e5) / 1e5;
+        }
+        let noneCount = 0;
+        for (const val of [rtp, avgWin, hitRate]) {
+          if (val === void 0) noneCount++;
+        }
+        (0, import_assert9.default)(noneCount <= 1, "Invalid combination of optimization conditions.");
+        this.searchRange = [-1, -1];
+        this.forceSearch = {};
+        if (typeof searchConditions === "number") {
+          this.searchRange = [searchConditions, searchConditions];
+        }
+        if (Array.isArray(searchConditions)) {
+          if (searchConditions[0] > searchConditions[1] || searchConditions.length !== 2) {
+            throw new Error("Invalid searchConditions range.");
+          }
+          this.searchRange = searchConditions;
+        }
+        if (typeof searchConditions === "object" && !Array.isArray(searchConditions)) {
+          this.searchRange = [-1, -1];
+          this.forceSearch = searchConditions;
+        }
+        this.rtp = rtp;
+        this.avgWin = avgWin;
+        this.hitRate = hitRate;
+        this.priority = priority;
+      }
+      getRtp() {
+        return this.rtp;
+      }
+      getAvgWin() {
+        return this.avgWin;
+      }
+      getHitRate() {
+        return this.hitRate;
+      }
+      getSearchRange() {
+        return this.searchRange;
+      }
+      getForceSearch() {
+        return this.forceSearch;
+      }
+    };
+    var OptimizationScaling = class {
+      config;
+      constructor(opts) {
+        this.config = opts;
+      }
+      getConfig() {
+        return this.config;
+      }
+    };
+    var OptimizationParameters = class _OptimizationParameters {
+      parameters;
+      constructor(opts) {
+        this.parameters = {
+          ..._OptimizationParameters.DEFAULT_PARAMETERS,
+          ...opts
+        };
+      }
+      static DEFAULT_PARAMETERS = {
+        numShowPigs: 5e3,
+        numPigsPerFence: 1e4,
+        threadsFenceConstruction: 16,
+        threadsShowConstruction: 16,
+        testSpins: [50, 100, 200],
+        testSpinsWeights: [0.3, 0.4, 0.3],
+        simulationTrials: 5e3,
+        graphIndexes: [],
+        run1000Batch: false,
+        minMeanToMedian: 4,
+        maxMeanToMedian: 8,
+        pmbRtp: 1,
+        scoreType: "rtp"
+      };
+      getParameters() {
+        return this.parameters;
+      }
+    };
+    var Optimizer = class {
+      gameConfig;
+      gameModes;
+      constructor(opts) {
+        this.gameConfig = opts.game.getConfig();
+        this.gameModes = opts.gameModes;
+        this.verifyConfig();
+      }
+      /**
+       * Runs the optimization process, and runs analysis after.
+       */
+      async runOptimization({ gameModes }) {
+        if (!import_worker_threads3.isMainThread) return;
+        const mathConfig = makeMathConfig(this, { writeToFile: true });
+        for (const mode of gameModes) {
+          const setupFile = makeSetupFile(this, mode);
+          await this.runSingleOptimization();
+        }
+        console.log("Optimization complete. Files written to build directory.");
+      }
+      async runSingleOptimization() {
+        return await rustProgram();
+      }
+      verifyConfig() {
+        for (const [k, mode] of Object.entries(this.gameModes)) {
+          const configMode = this.gameConfig.gameModes[k];
+          if (!configMode) {
+            throw new Error(
+              `Game mode "${mode}" defined in optimizer config does not exist in the game config.`
+            );
+          }
+          const conditions = Object.keys(mode.conditions);
+          const scalings = Object.keys(mode.scaling);
+          const parameters = Object.keys(mode.parameters);
+          for (const rs of configMode.resultSets) {
+            if (!conditions.includes(rs.criteria)) {
+              throw new Error(
+                `ResultSet criteria "${rs.criteria}" in game mode "${k}" does not have a corresponding optimization condition defined.`
+              );
+            }
+          }
+          let gameModeRtp = configMode.rtp;
+          let paramRtp = 0;
+          for (const cond of conditions) {
+            const paramConfig = mode.conditions[cond];
+            paramRtp += Number(paramConfig.getRtp());
+          }
+          gameModeRtp = Math.round(gameModeRtp * 1e3) / 1e3;
+          paramRtp = Math.round(paramRtp * 1e3) / 1e3;
+          (0, import_assert10.default)(
+            gameModeRtp === paramRtp,
+            `Sum of all RTP conditions (${paramRtp}) does not match the game mode RTP (${gameModeRtp}) in game mode "${k}".`
+          );
+        }
+      }
+      getGameConfig() {
+        return this.gameConfig;
+      }
+      getOptimizerGameModes() {
+        return this.gameModes;
+      }
+    };
+    async function rustProgram(...args) {
+      console.log("Starting Rust optimizer. This may take a while...");
+      return new Promise((resolve, reject) => {
+        const task = (0, import_child_process.spawn)("cargo", ["run", "-q", "--release", ...args], {
+          cwd: import_path5.default.join(__dirname, "./optimizer-rust"),
+          stdio: "pipe"
+        });
+        task.on("error", (error) => {
+          console.error("Error:", error);
+          reject(error);
+        });
+        task.on("exit", () => {
+          resolve(true);
+        });
+        task.on("close", () => {
+          resolve(true);
+        });
+        task.stdout.on("data", (data) => {
+          console.log(data.toString());
+        });
+        task.stderr.on("data", (data) => {
+          console.log(data.toString());
+        });
+        task.stdout.on("error", (data) => {
+          console.log(data.toString());
+          reject(data.toString());
+        });
+      });
+    }
+    var import_worker_threads4 = require("worker_threads");
+    var SlotGame = class {
+      configOpts;
+      simulation;
+      optimizer;
+      analyzer;
+      constructor(config) {
+        this.configOpts = config;
+      }
+      /**
+       * Sets up the simulation configuration.\
+       * Must be called before `runTasks()`.
+       */
+      configureSimulation(opts) {
+        this.simulation = new Simulation(opts, this.configOpts);
+      }
+      /**
+       * Sets up the optimization configuration.\
+       * Must be called before `runTasks()`.
+       */
+      configureOptimization(opts) {
+        this.optimizer = new Optimizer({
+          game: this,
+          gameModes: opts.gameModes
+        });
+      }
+      /**
+       * Runs the simulation based on the configured settings.
+       */
+      async runSimulation(opts = {}) {
+        if (!this.simulation) {
+          throw new Error(
+            "Simulation is not configured. Do so by calling configureSimulation() first."
+          );
+        }
+        await this.simulation.runSimulation(opts);
+      }
+      /**
+       * Runs the optimization based on the configured settings.
+       */
+      async runOptimization(opts) {
+        if (!this.optimizer) {
+          throw new Error(
+            "Optimization is not configured. Do so by calling configureOptimization() first."
+          );
+        }
+        await this.optimizer.runOptimization(opts);
+      }
+      /**
+       * Runs the analysis based on the configured settings.
+       */
+      async runAnalysis(opts) {
+        if (!this.optimizer) {
+          throw new Error(
+            "Optimization must be configured to run analysis. Do so by calling configureOptimization() first."
+          );
+        }
+        this.analyzer = new Analysis(this.optimizer);
+        await this.analyzer.runAnalysis(opts.gameModes);
+      }
+      /**
+       * Runs the configured tasks: simulation, optimization, and/or analysis.
+       */
+      async runTasks(opts = {}) {
+        if (!opts.doSimulation && !opts.doOptimization && !opts.doAnalysis) {
+          console.log("No tasks to run. Enable either simulation, optimization or analysis.");
+        }
+        if (opts.doSimulation) {
+          await this.runSimulation(opts.simulationOpts || {});
+        }
+        if (opts.doOptimization) {
+          await this.runOptimization(opts.optimizationOpts || { gameModes: [] });
+        }
+        if (opts.doAnalysis) {
+          await this.runAnalysis(opts.analysisOpts || { gameModes: [] });
+        }
+        if (import_worker_threads4.isMainThread) console.log("Finishing up...");
+      }
+      /**
+       * Gets the game configuration.
+       */
+      getConfig() {
+        return createGameConfig(this.configOpts);
+      }
+    };
+    function createSlotGame(opts) {
+      return new SlotGame(opts);
+    }
+    var defineUserState = (data) => data;
+    var defineSymbols = (symbols) => symbols;
+    var defineGameModes = (gameModes) => gameModes;
+    var import_assert11 = __toESM(require("assert"));
+    var GameMode = class {
+      name;
+      _reelsAmount;
+      _symbolsPerReel;
+      reelsAmount;
+      symbolsPerReel;
+      cost;
+      rtp;
+      reelSets;
+      resultSets;
+      isBonusBuy;
+      constructor(opts) {
+        this.name = opts.name;
+        this._reelsAmount = opts.reelsAmount;
+        this.reelsAmount = opts.reelsAmount;
+        this._symbolsPerReel = opts.symbolsPerReel;
+        this.symbolsPerReel = opts.symbolsPerReel;
+        this.cost = opts.cost;
+        this.rtp = opts.rtp;
+        this.reelSets = opts.reelSets;
+        this.resultSets = opts.resultSets;
+        this.isBonusBuy = opts.isBonusBuy;
+        (0, import_assert11.default)(this.rtp >= 0.9 && this.rtp <= 0.99, "RTP must be between 0.9 and 0.99");
+        (0, import_assert11.default)(
+          this.symbolsPerReel.length === this.reelsAmount,
+          "symbolsPerReel length must match reelsAmount."
+        );
+        (0, import_assert11.default)(this.reelSets.length > 0, "GameMode must have at least one ReelSet defined.");
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _resetTempValues() {
+        this.reelsAmount = this._reelsAmount;
+        this.symbolsPerReel = this._symbolsPerReel;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _setSymbolsPerReel(symbolsPerReel) {
+        (0, import_assert11.default)(
+          symbolsPerReel.length === this._reelsAmount,
+          "symbolsPerReel length must match reelsAmount."
+        );
+        this.symbolsPerReel = symbolsPerReel;
+      }
+      /**
+       * Intended for internal use only.
+       */
+      _setReelsAmount(reelsAmount) {
+        this.reelsAmount = reelsAmount;
+      }
+    };
+    var WinType = class {
+      payout;
+      winCombinations;
+      ctx;
+      wildSymbol;
+      constructor(opts) {
+        this.ctx = opts.ctx;
+        this.payout = 0;
+        this.winCombinations = [];
+        this.wildSymbol = opts?.wildSymbol;
+      }
+      /**
+       * Implementation of win evaluation logic. Sets `this.payout` and `this.winCombinations`.
+       */
+      evaluateWins(board) {
+        return this;
+      }
+      /**
+       * Custom post-processing of wins, e.g. for handling multipliers.
+       */
+      postProcess(func) {
+        const result = func(this.winCombinations, this.ctx);
+        this.winCombinations = result.winCombinations;
+        this.payout = result.winCombinations.reduce((sum, w) => sum + w.payout, 0);
+        return this;
+      }
+      /**
+       * Returns the total payout and detailed win combinations.
+       */
+      getWins() {
+        return {
+          payout: this.payout,
+          winCombinations: this.winCombinations
+        };
+      }
+      isWild(symbol) {
+        return !!this.wildSymbol && symbol.compare(this.wildSymbol);
+      }
+      getSymbolPayout(symbol, count) {
+        if (!symbol.pays) return 0;
+        let clusterSize = 0;
+        const sizes = Object.keys(symbol.pays).map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+        for (const size of sizes) {
+          if (size > count) break;
+          clusterSize = size;
+        }
+        return symbol.pays[clusterSize] || 0;
+      }
+    };
+    var import_assert12 = __toESM(require("assert"));
+    var LinesWinType = class extends WinType {
+      lines;
+      constructor(opts) {
+        super(opts);
+        this.lines = opts.lines;
+        if (Object.keys(this.lines).length === 0) {
+          throw new Error("LinesWinType must have at least one line defined.");
+        }
+      }
+      validateConfig() {
+        const reelsAmount = this.ctx.services.game.getCurrentGameMode().reelsAmount;
+        const symsPerReel = this.ctx.services.game.getCurrentGameMode().symbolsPerReel;
+        for (const [lineNum, positions] of Object.entries(this.lines)) {
+          if (positions.length !== reelsAmount) {
+            throw new Error(
+              `Line ${lineNum} has ${positions.length} positions, but the current game mode has ${reelsAmount} reels.`
+            );
+          }
+          for (let i = 0; i < positions.length; i++) {
+            if (positions[i] < 0 || positions[i] >= symsPerReel[i]) {
+              throw new Error(
+                `Line ${lineNum} has an invalid position ${positions[i]} on reel ${i}. Valid range is 0 to ${symsPerReel[i] - 1}.`
+              );
+            }
+          }
+        }
+        const firstLine = Math.min(...Object.keys(this.lines).map(Number));
+        if (firstLine !== 1) {
+          throw new Error(
+            `Lines must start from 1. Found line ${firstLine} as the first line.`
+          );
+        }
+      }
+      /**
+       * Calculates wins based on the defined paylines and provided board state.\
+       * Retrieve the results using `getWins()` after.
+       */
+      evaluateWins(board) {
+        this.validateConfig();
+        const lineWins = [];
+        const reels = board;
+        for (const [lineNumStr, line] of Object.entries(this.lines)) {
+          const lineNum = Number(lineNumStr);
+          let baseSymbol;
+          const potentialWinLine = [];
+          const potentialWildLine = [];
+          let isInterrupted = false;
+          for (const [ridx, reel] of reels.entries()) {
+            const sidx = line[ridx];
+            const thisSymbol = reel[sidx];
+            if (!baseSymbol) {
+              baseSymbol = thisSymbol;
+            }
+            (0, import_assert12.default)(baseSymbol, `No symbol found at line ${lineNum}, reel ${ridx}`);
+            (0, import_assert12.default)(thisSymbol, `No symbol found at line ${lineNum}, reel ${ridx}`);
+            if (potentialWinLine.length == 0) {
+              if (this.isWild(thisSymbol)) {
+                potentialWildLine.push({ reel: ridx, row: sidx, symbol: thisSymbol });
+              }
+              potentialWinLine.push({ reel: ridx, row: sidx, symbol: thisSymbol });
+              continue;
+            }
+            if (this.isWild(baseSymbol)) {
+              if (this.isWild(thisSymbol)) {
+                potentialWildLine.push({ reel: ridx, row: sidx, symbol: thisSymbol });
+              } else {
+                baseSymbol = thisSymbol;
+              }
+              potentialWinLine.push({ reel: ridx, row: sidx, symbol: thisSymbol });
+              continue;
+            }
+            if (baseSymbol.compare(thisSymbol) || this.isWild(thisSymbol)) {
+              potentialWinLine.push({ reel: ridx, row: sidx, symbol: thisSymbol });
+            } else {
+              isInterrupted = true;
+              break;
+            }
+          }
+          const minSymLine = Math.min(
+            ...Object.keys(baseSymbol.pays || {}).map((k) => parseInt(k, 10))
+          );
+          if (potentialWinLine.length < minSymLine) continue;
+          const linePayout = this.getLinePayout(potentialWinLine);
+          const wildLinePayout = this.getLinePayout(potentialWildLine);
+          let finalLine = {
+            kind: potentialWinLine.length,
+            baseSymbol,
+            symbols: potentialWinLine.map((s) => ({
+              symbol: s.symbol,
+              isWild: this.isWild(s.symbol),
+              reelIndex: s.reel,
+              posIndex: s.row
+            })),
+            lineNumber: lineNum,
+            payout: linePayout
+          };
+          if (wildLinePayout > linePayout) {
+            baseSymbol = potentialWildLine[0]?.symbol;
+            finalLine = {
+              kind: potentialWildLine.length,
+              baseSymbol,
+              symbols: potentialWildLine.map((s) => ({
+                symbol: s.symbol,
+                isWild: this.isWild(s.symbol),
+                reelIndex: s.reel,
+                posIndex: s.row
+              })),
+              lineNumber: lineNum,
+              payout: wildLinePayout
+            };
+          }
+          lineWins.push(finalLine);
+        }
+        for (const win of lineWins) {
+          this.ctx.services.data.recordSymbolOccurrence({
+            kind: win.kind,
+            symbolId: win.baseSymbol.id,
+            spinType: this.ctx.state.currentSpinType
+          });
+        }
+        this.payout = lineWins.reduce((sum, l) => sum + l.payout, 0);
+        this.winCombinations = lineWins;
+        return this;
+      }
+      getLinePayout(line) {
+        if (line.length === 0) return 0;
+        let baseSymbol = line.find((s) => !this.isWild(s.symbol))?.symbol;
+        if (!baseSymbol) baseSymbol = line[0].symbol;
+        const kind = line.length;
+        const payout = this.getSymbolPayout(baseSymbol, kind);
+        return payout;
+      }
+    };
+    var ClusterWinType = class extends WinType {
+      _checked = [];
+      _checkedWilds = [];
+      _currentBoard = [];
+      constructor(opts) {
+        super(opts);
+      }
+      validateConfig() {
+      }
+      /**
+       * Calculates wins based on symbol cluster size and provided board state.\
+       * Retrieve the results using `getWins()` after.
+       */
+      evaluateWins(board) {
+        this.validateConfig();
+        this._checked = [];
+        this._currentBoard = board;
+        const clusterWins = [];
+        const potentialClusters = [];
+        for (const [ridx, reel] of board.entries()) {
+          for (const [sidx, symbol] of reel.entries()) {
+            this._checkedWilds = [];
+            if (this.isWild(symbol)) continue;
+            if (this.isChecked(ridx, sidx)) {
+              continue;
+            }
+            const thisSymbol = { reel: ridx, row: sidx, symbol };
+            this._checked.push(thisSymbol);
+            const neighbors = this.getNeighbors(ridx, sidx);
+            const matchingSymbols = this.evaluateCluster(symbol, neighbors);
+            if (matchingSymbols.size >= 1) {
+              potentialClusters.push([thisSymbol, ...matchingSymbols.values()]);
+            }
+          }
+        }
+        for (const [ridx, reel] of board.entries()) {
+          for (const [sidx, symbol] of reel.entries()) {
+            this._checkedWilds = [];
+            if (!this.isWild(symbol)) continue;
+            if (this.isChecked(ridx, sidx)) {
+              continue;
+            }
+            const thisSymbol = { reel: ridx, row: sidx, symbol };
+            this._checked.push(thisSymbol);
+            const neighbors = this.getNeighbors(ridx, sidx);
+            const matchingSymbols = this.evaluateCluster(symbol, neighbors);
+            if (matchingSymbols.size >= 1) {
+              potentialClusters.push([thisSymbol, ...matchingSymbols.values()]);
+            }
+          }
+        }
+        for (const cluster of potentialClusters) {
+          const kind = cluster.length;
+          let baseSymbol = cluster.find((s) => !this.isWild(s.symbol))?.symbol;
+          if (!baseSymbol) baseSymbol = cluster[0].symbol;
+          const payout = this.getSymbolPayout(baseSymbol, kind);
+          if (payout === 0) continue;
+          if (!baseSymbol.pays || Object.keys(baseSymbol.pays).length === 0) {
+            continue;
+          }
+          clusterWins.push({
+            payout,
+            kind,
+            baseSymbol,
+            symbols: cluster.map((s) => ({
+              symbol: s.symbol,
+              isWild: this.isWild(s.symbol),
+              reelIndex: s.reel,
+              posIndex: s.row
+            }))
+          });
+        }
+        for (const win of clusterWins) {
+          this.ctx.services.data.recordSymbolOccurrence({
+            kind: win.kind,
+            symbolId: win.baseSymbol.id,
+            spinType: this.ctx.state.currentSpinType
+          });
+        }
+        this.payout = clusterWins.reduce((sum, c) => sum + c.payout, 0);
+        this.winCombinations = clusterWins;
+        return this;
+      }
+      getNeighbors(ridx, sidx) {
+        const board = this._currentBoard;
+        const neighbors = [];
+        const potentialNeighbors = [
+          [ridx - 1, sidx],
+          [ridx + 1, sidx],
+          [ridx, sidx - 1],
+          [ridx, sidx + 1]
+        ];
+        potentialNeighbors.forEach(([nridx, nsidx]) => {
+          if (board[nridx] && board[nridx][nsidx]) {
+            neighbors.push({ reel: nridx, row: nsidx, symbol: board[nridx][nsidx] });
+          }
+        });
+        return neighbors;
+      }
+      evaluateCluster(rootSymbol, neighbors) {
+        const matchingSymbols = /* @__PURE__ */ new Map();
+        neighbors.forEach((neighbor) => {
+          const { reel, row, symbol } = neighbor;
+          if (this.isChecked(reel, row)) return;
+          if (this.isCheckedWild(reel, row)) return;
+          if (this.isWild(symbol) || symbol.compare(rootSymbol)) {
+            const key = `${reel}-${row}`;
+            matchingSymbols.set(key, { reel, row, symbol });
+            if (symbol.compare(rootSymbol)) {
+              this._checked.push(neighbor);
+            }
+            if (this.isWild(symbol)) {
+              this._checkedWilds.push(neighbor);
+            }
+            const neighbors2 = this.getNeighbors(reel, row);
+            const nestedMatches = this.evaluateCluster(rootSymbol, neighbors2);
+            nestedMatches.forEach((nsym) => {
+              const nkey = `${nsym.reel}-${nsym.row}`;
+              matchingSymbols.set(nkey, nsym);
+            });
+          }
+        });
+        return matchingSymbols;
+      }
+      isChecked(ridx, sidx) {
+        return !!this._checked.find((c) => c.reel === ridx && c.row === sidx);
+      }
+      isCheckedWild(ridx, sidx) {
+        return !!this._checkedWilds.find((c) => c.reel === ridx && c.row === sidx);
+      }
+    };
+    var ManywaysWinType = class extends WinType {
+      constructor(opts) {
+        super(opts);
+      }
+      validateConfig() {
+      }
+      /**
+       * Calculates wins based on the defined paylines and provided board state.\
+       * Retrieve the results using `getWins()` after.
+       */
+      evaluateWins(board) {
+        this.validateConfig();
+        const waysWins = [];
+        const reels = board;
+        const possibleWaysWins = /* @__PURE__ */ new Map();
+        const candidateSymbols = /* @__PURE__ */ new Map();
+        let searchReelIdx = 0;
+        let searchActive = true;
+        while (searchActive && searchReelIdx < reels.length) {
+          const reel = reels[searchReelIdx];
+          let hasWild = false;
+          for (const symbol of reel) {
+            candidateSymbols.set(symbol.id, symbol);
+            if (this.isWild(symbol)) {
+              hasWild = true;
+            }
+          }
+          if (!hasWild) {
+            searchActive = false;
+          }
+          searchReelIdx++;
+        }
+        for (const baseSymbol of candidateSymbols.values()) {
+          let symbolList = {};
+          let isInterrupted = false;
+          for (const [ridx, reel] of reels.entries()) {
+            if (isInterrupted) break;
+            for (const [sidx, symbol] of reel.entries()) {
+              const isMatch = baseSymbol.compare(symbol) || this.isWild(symbol);
+              if (isMatch) {
+                if (!symbolList[ridx]) {
+                  symbolList[ridx] = [];
+                }
+                symbolList[ridx].push({ reel: ridx, row: sidx, symbol });
+              }
+            }
+            if (!symbolList[ridx]) {
+              isInterrupted = true;
+              break;
+            }
+          }
+          const minSymLine = Math.min(
+            ...Object.keys(baseSymbol.pays || {}).map((k) => parseInt(k, 10))
+          );
+          const wayLength = this.getWayLength(symbolList);
+          if (wayLength >= minSymLine) {
+            possibleWaysWins.set(baseSymbol.id, symbolList);
+          }
+        }
+        for (const [baseSymbolId, symbolList] of possibleWaysWins.entries()) {
+          const wayLength = this.getWayLength(symbolList);
+          let baseSymbol = Object.values(symbolList).flatMap((l) => l.map((s) => s)).find((s) => !this.isWild(s.symbol))?.symbol;
+          if (!baseSymbol) baseSymbol = symbolList[0][0].symbol;
+          const singleWayPayout = this.getSymbolPayout(baseSymbol, wayLength);
+          const totalWays = Object.values(symbolList).reduce(
+            (ways, syms) => ways * syms.length,
+            1
+          );
+          const totalPayout = singleWayPayout * totalWays;
+          waysWins.push({
+            kind: wayLength,
+            baseSymbol,
+            symbols: Object.values(symbolList).flatMap(
+              (reel) => reel.map((s) => ({
+                symbol: s.symbol,
+                isWild: this.isWild(s.symbol),
+                reelIndex: s.reel,
+                posIndex: s.row
+              }))
+            ),
+            ways: totalWays,
+            payout: totalPayout
+          });
+        }
+        for (const win of waysWins) {
+          this.ctx.services.data.recordSymbolOccurrence({
+            kind: win.kind,
+            symbolId: win.baseSymbol.id,
+            spinType: this.ctx.state.currentSpinType
+          });
+        }
+        this.payout = waysWins.reduce((sum, l) => sum + l.payout, 0);
+        this.winCombinations = waysWins;
+        return this;
+      }
+      getWayLength(symbolList) {
+        return Math.max(...Object.keys(symbolList).map((k) => parseInt(k, 10))) + 1;
+      }
+    };
+    var import_fs5 = __toESM(require("fs"));
+    var import_path7 = __toESM(require("path"));
+    var import_worker_threads5 = require("worker_threads");
+    var import_fs4 = __toESM(require("fs"));
+    var import_path6 = __toESM(require("path"));
+    var ReelSet = class {
+      id;
+      associatedGameModeName;
+      reels;
+      rng;
+      constructor(opts) {
+        this.id = opts.id;
+        this.associatedGameModeName = "";
+        this.reels = [];
+        this.rng = new RandomNumberGenerator();
+        this.rng.setSeed(opts.seed ?? 0);
+      }
+      generateReels(config) {
+        throw new Error("Not implemented");
+      }
+      /**
+       * Reads a reelset CSV file and returns the reels as arrays of GameSymbols.
+       */
+      parseReelsetCSV(reelSetPath, config) {
+        if (!import_fs4.default.existsSync(reelSetPath)) {
+          throw new Error(`Reelset CSV file not found at path: ${reelSetPath}`);
+        }
+        const allowedExtensions = [".csv"];
+        const ext = import_path6.default.extname(reelSetPath).toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+          throw new Error(
+            `Invalid file extension for reelset CSV: ${ext}. Allowed extensions are: ${allowedExtensions.join(
+              ", "
+            )}`
+          );
+        }
+        const csvData = import_fs4.default.readFileSync(reelSetPath, "utf8");
+        const rows = csvData.split("\n").filter((line) => line.trim() !== "");
+        const reels = Array.from(
+          { length: config.gameModes[this.associatedGameModeName].reelsAmount },
+          () => []
+        );
+        rows.forEach((row) => {
+          const symsInRow = row.split(",").map((symbolId) => {
+            const symbol = config.symbols.get(symbolId.trim());
+            if (!symbol) {
+              throw new Error(`Symbol with id "${symbolId}" not found in game config.`);
+            }
+            return symbol;
+          });
+          symsInRow.forEach((symbol, ridx) => {
+            if (ridx >= reels.length) {
+              throw new Error(
+                `Row in reelset CSV has more symbols than expected reels amount (${reels.length})`
+              );
+            }
+            reels[ridx].push(symbol);
+          });
+        });
+        const reelLengths = reels.map((r) => r.length);
+        const uniqueLengths = new Set(reelLengths);
+        if (uniqueLengths.size > 1) {
+          throw new Error(
+            `Inconsistent reel lengths in reelset CSV at ${reelSetPath}: ${[
+              ...uniqueLengths
+            ].join(", ")}`
+          );
+        }
+        return reels;
+      }
+    };
+    var GeneratedReelSet = class extends ReelSet {
+      symbolWeights = /* @__PURE__ */ new Map();
+      rowsAmount;
+      limitSymbolsToReels;
+      spaceBetweenSameSymbols;
+      spaceBetweenSymbols;
+      preferStackedSymbols;
+      symbolStacks;
+      symbolQuotas;
+      overrideExisting;
+      constructor(opts) {
+        super(opts);
+        this.id = opts.id;
+        this.symbolWeights = new Map(Object.entries(opts.symbolWeights));
+        this.rowsAmount = opts.rowsAmount || 250;
+        if (opts.limitSymbolsToReels) this.limitSymbolsToReels = opts.limitSymbolsToReels;
+        this.overrideExisting = opts.overrideExisting || false;
+        this.spaceBetweenSameSymbols = opts.spaceBetweenSameSymbols;
+        this.spaceBetweenSymbols = opts.spaceBetweenSymbols;
+        this.preferStackedSymbols = opts.preferStackedSymbols;
+        this.symbolStacks = opts.symbolStacks;
+        this.symbolQuotas = opts.symbolQuotas;
+        if (typeof this.spaceBetweenSameSymbols == "number" && (this.spaceBetweenSameSymbols < 1 || this.spaceBetweenSameSymbols > 8) || typeof this.spaceBetweenSameSymbols == "object" && Object.values(this.spaceBetweenSameSymbols).some((v) => v < 1 || v > 8)) {
+          throw new Error(
+            `spaceBetweenSameSymbols must be between 1 and 8, got ${this.spaceBetweenSameSymbols}.`
+          );
+        }
+        if (Object.values(this.spaceBetweenSymbols || {}).some(
+          (o) => Object.values(o).some((v) => v < 1 || v > 8)
+        )) {
+          throw new Error(
+            `spaceBetweenSymbols must be between 1 and 8, got ${this.spaceBetweenSymbols}.`
+          );
+        }
+        if (this.preferStackedSymbols && (this.preferStackedSymbols < 0 || this.preferStackedSymbols > 100)) {
+          throw new Error(
+            `preferStackedSymbols must be between 0 and 100, got ${this.preferStackedSymbols}.`
+          );
+        }
+      }
+      validateConfig(config) {
+        this.symbolWeights.forEach((_, symbol) => {
+          if (!config.symbols.has(symbol)) {
+            throw new Error(
+              `Symbol "${symbol}" of the reel generator ${this.id} for mode ${this.associatedGameModeName} is not defined in the game config`
+            );
+          }
+        });
+        if (this.limitSymbolsToReels && Object.keys(this.limitSymbolsToReels).length == 0) {
+          this.limitSymbolsToReels = void 0;
+        }
+      }
+      isSymbolAllowedOnReel(symbolId, reelIdx) {
+        if (!this.limitSymbolsToReels) return true;
+        const allowedReels = this.limitSymbolsToReels[symbolId];
+        if (!allowedReels || allowedReels.length === 0) return true;
+        return allowedReels.includes(reelIdx);
+      }
+      resolveStacking(symbolId, reelIdx) {
+        const cfg = this.symbolStacks?.[symbolId];
+        if (!cfg) return null;
+        const STACKING_MIN = 1;
+        const STACKING_MAX = 4;
+        const chance = typeof cfg.chance === "number" ? cfg.chance : cfg.chance?.[reelIdx] ?? 0;
+        if (chance <= 0) return null;
+        let min = typeof cfg.min === "number" ? cfg.min : cfg.min?.[reelIdx] ?? STACKING_MIN;
+        let max = typeof cfg.max === "number" ? cfg.max : cfg.max?.[reelIdx] ?? STACKING_MAX;
+        return { chance, min, max };
+      }
+      tryPlaceStack(reel, config, reelIdx, symbolId, startIndex, maxStack) {
+        if (!this.isSymbolAllowedOnReel(symbolId, reelIdx)) return 0;
+        let canPlace = 0;
+        for (let j = 0; j < maxStack; j++) {
+          const idx = (startIndex + j) % this.rowsAmount;
+          if (reel[idx] !== null) break;
+          canPlace++;
+        }
+        if (canPlace === 0) return 0;
+        const symObj = config.symbols.get(symbolId);
+        if (!symObj) {
+          throw new Error(
+            `Symbol with id "${symbolId}" not found in the game config symbols map.`
+          );
+        }
+        for (let j = 0; j < canPlace; j++) {
+          const idx = (startIndex + j) % reel.length;
+          reel[idx] = symObj;
+        }
+        return canPlace;
+      }
+      /**
+       * Checks if a symbol can be placed at the target index without violating spacing rules.
+       */
+      violatesSpacing(reel, symbolId, targetIndex) {
+        const circDist = (a, b) => {
+          const diff = Math.abs(a - b);
+          return Math.min(diff, this.rowsAmount - diff);
+        };
+        const spacingType = this.spaceBetweenSameSymbols ?? void 0;
+        const sameSpacing = typeof spacingType === "number" ? spacingType : spacingType?.[symbolId] ?? 0;
+        for (let i = 0; i <= reel.length; i++) {
+          const placed = reel[i];
+          if (!placed) continue;
+          const dist = circDist(targetIndex, i);
+          if (sameSpacing >= 1 && placed.id === symbolId) {
+            if (dist <= sameSpacing) return true;
+          }
+          if (this.spaceBetweenSymbols) {
+            const forward = this.spaceBetweenSymbols[symbolId]?.[placed.id] ?? 0;
+            if (forward >= 1 && dist <= forward) return true;
+            const reverse = this.spaceBetweenSymbols[placed.id]?.[symbolId] ?? 0;
+            if (reverse >= 1 && dist <= reverse) return true;
+          }
+        }
+        return false;
+      }
+      generateReels(config) {
+        this.validateConfig(config);
+        const gameMode = config.gameModes[this.associatedGameModeName];
+        if (!gameMode) {
+          throw new Error(
+            `Error generating reels for game mode "${this.associatedGameModeName}". It's not defined in the game config.`
+          );
+        }
+        const outputDir = config.rootDir.endsWith(config.outputDir) ? config.rootDir : import_path7.default.join(config.rootDir, config.outputDir);
+        const filePath = import_path7.default.join(
+          outputDir,
+          `reels_${this.associatedGameModeName}-${this.id}.csv`
+        );
+        const exists = import_fs5.default.existsSync(filePath);
+        if (exists && !this.overrideExisting) {
+          this.reels = this.parseReelsetCSV(filePath, config);
+          return this;
+        }
+        if (!exists && this.symbolWeights.size === 0) {
+          throw new Error(
+            `Cannot generate reels for generator "${this.id}" of mode "${this.associatedGameModeName}" because the symbol weights are empty.`
+          );
+        }
+        const reelsAmount = gameMode.reelsAmount;
+        const weightsObj = Object.fromEntries(this.symbolWeights);
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          const reel = new Array(this.rowsAmount).fill(null);
+          const reelQuotas = {};
+          const quotaCounts = {};
+          let totalReelsQuota = 0;
+          for (const [sym, quotaConf] of Object.entries(this.symbolQuotas || {})) {
+            const q = typeof quotaConf === "number" ? quotaConf : quotaConf[ridx];
+            if (!q) continue;
+            reelQuotas[sym] = q;
+            totalReelsQuota += q;
+          }
+          if (totalReelsQuota > 100) {
+            throw new Error(
+              `Total symbol quotas for reel ${ridx} exceed 100%. Adjust your configuration on reel set "${this.id}".`
+            );
+          }
+          if (totalReelsQuota > 0) {
+            for (const [sym, quota] of Object.entries(reelQuotas)) {
+              const quotaCount = Math.max(1, Math.floor(this.rowsAmount * quota / 100));
+              quotaCounts[sym] = quotaCount;
+            }
+          }
+          for (const [sym, targetCount] of Object.entries(quotaCounts)) {
+            let remaining = targetCount;
+            let attempts = 0;
+            while (remaining > 0) {
+              if (attempts++ > this.rowsAmount * 10) {
+                throw new Error(
+                  `Failed to place ${targetCount} of symbol ${sym} on reel ${ridx} (likely spacing/stacking too strict).`
+                );
+              }
+              const pos = Math.round(this.rng.randomFloat(0, this.rowsAmount - 1));
+              const stackCfg = this.resolveStacking(sym, ridx);
+              let placed = 0;
+              if (stackCfg && Math.round(this.rng.randomFloat(1, 100)) <= stackCfg.chance) {
+                const stackSize = Math.max(
+                  0,
+                  Math.round(this.rng.randomFloat(stackCfg.min, stackCfg.max))
+                );
+                const toPlace = Math.min(stackSize, remaining);
+                placed = this.tryPlaceStack(reel, config, ridx, sym, pos, toPlace);
+              }
+              if (placed === 0 && reel[pos] === null && this.isSymbolAllowedOnReel(sym, ridx) && !this.violatesSpacing(reel, sym, pos)) {
+                reel[pos] = config.symbols.get(sym);
+                placed = 1;
+              }
+              remaining -= placed;
+            }
+          }
+          for (let r = 0; r < this.rowsAmount; r++) {
+            if (reel[r] !== null) continue;
+            let chosenSymbolId = this.rng.weightedRandom(weightsObj);
+            const nextHasStackCfg = !!this.resolveStacking(chosenSymbolId, ridx);
+            if (!nextHasStackCfg && this.preferStackedSymbols && reel.length > 0) {
+              const prevSymbol = r - 1 >= 0 ? reel[r - 1] : reel[reel.length - 1];
+              if (prevSymbol && Math.round(this.rng.randomFloat(1, 100)) <= this.preferStackedSymbols && (!this.spaceBetweenSameSymbols || !this.violatesSpacing(reel, prevSymbol.id, r))) {
+                chosenSymbolId = prevSymbol.id;
+              }
+            }
+            const stackCfg = this.resolveStacking(chosenSymbolId, ridx);
+            if (stackCfg && this.isSymbolAllowedOnReel(chosenSymbolId, ridx)) {
+              const roll = Math.round(this.rng.randomFloat(1, 100));
+              if (roll <= stackCfg.chance) {
+                const desiredSize = Math.max(
+                  1,
+                  Math.round(this.rng.randomFloat(stackCfg.min, stackCfg.max))
+                );
+                const placed = this.tryPlaceStack(
+                  reel,
+                  config,
+                  ridx,
+                  chosenSymbolId,
+                  r,
+                  desiredSize
+                );
+                if (placed > 0) {
+                  r += placed - 1;
+                  continue;
+                }
+              }
+            }
+            let tries = 0;
+            const maxTries = 2500;
+            while (!this.isSymbolAllowedOnReel(chosenSymbolId, ridx) || this.violatesSpacing(reel, chosenSymbolId, r)) {
+              if (++tries > maxTries) {
+                throw new Error(
+                  [
+                    `Failed to place a symbol on reel ${ridx} at position ${r} after ${maxTries} attempts.
+`,
+                    "Try to change the seed or adjust your configuration.\n"
+                  ].join(" ")
+                );
+              }
+              chosenSymbolId = this.rng.weightedRandom(weightsObj);
+              const hasStackCfg = !!this.resolveStacking(chosenSymbolId, ridx);
+              if (!hasStackCfg && this.preferStackedSymbols && reel.length > 0) {
+                const prevSymbol = r - 1 >= 0 ? reel[r - 1] : reel[reel.length - 1];
+                if (prevSymbol && Math.round(this.rng.randomFloat(1, 100)) <= this.preferStackedSymbols && (!this.spaceBetweenSameSymbols || !this.violatesSpacing(reel, prevSymbol.id, r))) {
+                  chosenSymbolId = prevSymbol.id;
+                }
+              }
+            }
+            const symbol = config.symbols.get(chosenSymbolId);
+            if (!symbol) {
+              throw new Error(
+                `Symbol with id "${chosenSymbolId}" not found in the game config symbols map.`
+              );
+            }
+            reel[r] = symbol;
+          }
+          if (reel.some((s) => s === null)) {
+            throw new Error(`Reel ${ridx} has unfilled positions after generation.`);
+          }
+          this.reels.push(reel);
+        }
+        const csvRows = Array.from(
+          { length: this.rowsAmount },
+          () => Array.from({ length: reelsAmount }, () => "")
+        );
+        for (let ridx = 0; ridx < reelsAmount; ridx++) {
+          for (let r = 0; r < this.rowsAmount; r++) {
+            csvRows[r][ridx] = this.reels[ridx][r].id;
+          }
+        }
+        const csvString = csvRows.map((row) => row.join(",")).join("\n");
+        if (import_worker_threads5.isMainThread) {
+          createDirIfNotExists(outputDir);
+          import_fs5.default.writeFileSync(filePath, csvString);
+          console.log(
+            `Generated reelset ${this.id} for game mode ${this.associatedGameModeName}`
+          );
+        }
+        this.reels = this.parseReelsetCSV(filePath, config);
+        return this;
+      }
+    };
+    var import_assert13 = __toESM(require("assert"));
+    var StaticReelSet = class extends ReelSet {
+      reels;
+      csvPath;
+      _strReels;
+      constructor(opts) {
+        super(opts);
+        this.reels = [];
+        this._strReels = opts.reels || [];
+        this.csvPath = opts.csvPath || "";
+        (0, import_assert13.default)(
+          opts.reels || opts.csvPath,
+          `Either 'reels' or 'csvPath' must be provided for StaticReelSet ${this.id}`
+        );
+      }
+      validateConfig(config) {
+        this.reels.forEach((reel) => {
+          reel.forEach((symbol) => {
+            if (!config.symbols.has(symbol.id)) {
+              throw new Error(
+                `Symbol "${symbol}" of the reel set ${this.id} for mode ${this.associatedGameModeName} is not defined in the game config`
+              );
+            }
+          });
+        });
+        if (this.csvPath && this._strReels.length > 0) {
+          throw new Error(
+            `Both 'csvPath' and 'reels' are provided for StaticReelSet ${this.id}. Please provide only one.`
+          );
+        }
+      }
+      generateReels(config) {
+        this.validateConfig(config);
+        if (this._strReels.length > 0) {
+          this.reels = this._strReels.map((reel) => {
+            return reel.map((symbolId) => {
+              const symbol = config.symbols.get(symbolId);
+              if (!symbol) {
+                throw new Error(
+                  `Symbol "${symbolId}" of the reel set ${this.id} for mode ${this.associatedGameModeName} is not defined in the game config`
+                );
+              }
+              return symbol;
+            });
+          });
+        }
+        if (this.csvPath) {
+          this.reels = this.parseReelsetCSV(this.csvPath, config);
+        }
+        return this;
+      }
+    };
+    var StandaloneBoard = class {
+      board;
+      ctx;
+      reelsAmount;
+      symbolsPerReel;
+      padSymbols;
+      constructor(opts) {
+        this.board = new Board();
+        this.ctx = opts.ctx;
+        this.reelsAmount = opts.reelsAmount;
+        this.symbolsPerReel = opts.symbolsPerReel;
+        this.padSymbols = opts.padSymbols;
+      }
+      /**
+       * Resets the board to an empty state.\
+       * This is called before drawing a new board.
+       */
+      resetBoard() {
+        this.resetReels();
+        this.board.lastDrawnReelStops = [];
+      }
+      /**
+       * Gets the current reels and symbols on the board.
+       */
+      getBoardReels() {
+        return this.board.reels;
+      }
+      getPaddingTop() {
+        return this.board.paddingTop;
+      }
+      getPaddingBottom() {
+        return this.board.paddingBottom;
+      }
+      /**
+       * Gets the symbol at the specified reel and row index.
+       */
+      getSymbol(reelIndex, rowIndex) {
+        return this.board.getSymbol(reelIndex, rowIndex);
+      }
+      /**
+       * Sets the symbol at the specified reel and row index.
+       */
+      setSymbol(reelIndex, rowIndex, symbol) {
+        this.board.setSymbol(reelIndex, rowIndex, symbol);
+      }
+      /**
+       * Removes the symbol at the specified reel and row index.
+       */
+      removeSymbol(reelIndex, rowIndex) {
+        this.board.removeSymbol(reelIndex, rowIndex);
+      }
+      resetReels() {
+        this.board.resetReels({
+          ctx: this.ctx
+        });
+      }
+      /**
+       * Sets the anticipation value for a specific reel.
+       */
+      setAnticipationForReel(reelIndex, value) {
+        this.board.anticipation[reelIndex] = value;
+      }
+      /**
+       * Counts how many symbols matching the criteria are on a specific reel.
+       */
+      countSymbolsOnReel(symbolOrProperties, reelIndex) {
+        return this.board.countSymbolsOnReel(symbolOrProperties, reelIndex);
+      }
+      /**
+       * Counts how many symbols matching the criteria are on the board.
+       *
+       * Passing a GameSymbol will compare by ID, passing a properties object will compare by properties.
+       *
+       * Returns a tuple where the first element is the total count, and the second element is a record of counts per reel index.
+       */
+      countSymbolsOnBoard(symbolOrProperties) {
+        return this.board.countSymbolsOnBoard(symbolOrProperties);
+      }
+      /**
+       * Checks if a symbol appears more than once on any reel in the current reel set.
+       *
+       * Useful to check for "forbidden" generations, e.g. 2 scatters on one reel.
+       */
+      isSymbolOnAnyReelMultipleTimes(symbol) {
+        return this.board.isSymbolOnAnyReelMultipleTimes(symbol);
+      }
+      /**
+       * Gets all reel stops (positions) where the specified symbol appears in the current reel set.\
+       * Returns an array of arrays, where each inner array contains the positions for the corresponding reel.
+       */
+      getReelStopsForSymbol(reels, symbol) {
+        return this.board.getReelStopsForSymbol(reels, symbol);
+      }
+      /**
+       * Combines multiple arrays of reel stops into a single array of reel stops.\
+       */
+      combineReelStops(...reelStops) {
+        return this.board.combineReelStops({
+          ctx: this.ctx,
+          reelStops
+        });
+      }
+      /**
+       * From a list of reel stops on reels, selects a random stop for a speficied number of random symbols.
+       *
+       * Mostly useful for placing scatter symbols on the board.
+       */
+      getRandomReelStops(reels, reelStops, amount) {
+        return this.board.getRandomReelStops({
+          ctx: this.ctx,
+          reels,
+          reelsAmount: this.reelsAmount,
+          reelStops,
+          amount
+        });
+      }
+      /**
+       * Selects a random reel set based on the configured weights of the current result set.\
+       * Returns the reels as arrays of GameSymbols.
+       */
+      getRandomReelset() {
+        return this.board.getRandomReelset(this.ctx);
+      }
+      /**
+       * Draws a board using specified reel stops.
+       */
+      drawBoardWithForcedStops(opts) {
+        return this.drawBoardMixed(opts.reels, opts.forcedStops, opts.randomOffset);
+      }
+      /**
+       * Draws a board using random reel stops.
+       */
+      drawBoardWithRandomStops(reels) {
+        return this.drawBoardMixed(reels);
+      }
+      drawBoardMixed(reels, forcedStops, forcedStopsOffset) {
+        return this.board.drawBoardMixed({
+          ctx: this.ctx,
+          reels,
+          forcedStops,
+          forcedStopsOffset,
+          reelsAmount: this.reelsAmount,
+          symbolsPerReel: this.symbolsPerReel,
+          padSymbols: this.padSymbols
+        });
+      }
+      /**
+       * Tumbles the board. All given symbols will be deleted and new symbols will fall from the top.
+       */
+      tumbleBoard(symbolsToDelete) {
+        return this.board.tumbleBoard({
+          ctx: this.ctx,
+          symbolsToDelete,
+          reelsAmount: this.reelsAmount,
+          symbolsPerReel: this.symbolsPerReel,
+          padSymbols: this.padSymbols
+        });
+      }
+      /**
+       * **Experimental - May be changed or replaced in the future**
+       * 
+       * Tumbles the board normally like `tumbleBoard`, but allows specifying a different reel set to get symbols from.\
+       * Also requires specifying the starting stops from where the symbols will be tumbled.\
+       * **This method does not remember the last tumbled position. Use this if you need to do a singular one-off tumble.**
+       */
+      tumbleBoardAndForget(opts) {
+        return this.board.tumbleBoard({
+          ctx: this.ctx,
+          symbolsToDelete: opts.symbolsToDelete,
+          reelsAmount: this.reelsAmount,
+          symbolsPerReel: this.symbolsPerReel,
+          padSymbols: this.padSymbols,
+          reels: opts.reels,
+          startingStops: opts.forcedStops
+        });
+      }
+      /**
+       * Dedupes win symbols for tumble.\
+       * Returns a list of symbols to remove from the board based on the given win combinations.
+       *
+       * Since it may be possible that multiple win combinations include the same symbol (e.g. Wilds),\
+       * this method ensures that each symbol is only listed once for removal. Otherwise tumbling may break.
+       */
+      dedupeWinSymbolsForTumble(winCombinations) {
+        return this.board.dedupeWinSymbolsForTumble(winCombinations);
+      }
+      /**
+       * Sets symbolsPerReel.
+       */
+      setSymbolsPerReel(symbolsPerReel) {
+        this.symbolsPerReel = symbolsPerReel;
+      }
+      /**
+       * Sets the reelsAmount.
+       */
+      setReelsAmount(reelsAmount) {
+        this.reelsAmount = reelsAmount;
+      }
+    };
+  }
+});
+
+// dist/math/types.js
+var require_types = __commonJS({
+  "dist/math/types.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.PLANT_ROWS = exports2.ROWS = exports2.REELS = void 0;
+    exports2.REELS = 5;
+    exports2.ROWS = 5;
+    exports2.PLANT_ROWS = 3;
+  }
+});
+
+// dist/math/reels.js
+var require_reels = __commonJS({
+  "dist/math/reels.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.drawBoard = drawBoard;
+    exports2.cloneBoard = cloneBoard;
+    exports2.countSymbols = countSymbols;
+    exports2.rerollPlantCells = rerollPlantCells;
+    var types_js_1 = require_types();
+    var plantLayerWeights = [
+      { value: "PEASHOOTER_1", weight: 24 },
+      { value: "PEASHOOTER_2", weight: 16 },
+      { value: "PEASHOOTER_3", weight: 10 },
+      { value: "WATERMELON", weight: 6 },
+      { value: "CHERRY", weight: 4 },
+      { value: "SQUASH", weight: 5 },
+      { value: "NUT", weight: 8 },
+      { value: "BONUS", weight: 5 },
+      { value: "DOOM_SHROOM", weight: 1 },
+      { value: "CHILI", weight: 1 },
+      { value: "EMPTY", weight: 20 }
+    ];
+    var zombieLayerWeights = [
+      { value: "ZOMBIE_15", weight: 28 },
+      { value: "ZOMBIE_20", weight: 14 },
+      { value: "ZOMBIE_50", weight: 4 },
+      { value: "BONUS", weight: 4 },
+      { value: "EMPTY", weight: 50 }
+    ];
+    function drawBoard(rng) {
+      return Array.from({ length: types_js_1.REELS }, (_, reel) => Array.from({ length: types_js_1.ROWS }, (_2, row) => {
+        const weights = row < types_js_1.PLANT_ROWS ? plantLayerWeights : zombieLayerWeights;
+        return { symbol: rng.pickWeighted(weights) };
+      }));
+    }
+    function cloneBoard(board) {
+      return board.map((reel) => reel.map((cell) => ({ ...cell })));
+    }
+    function countSymbols(board, symbol) {
+      return board.flat().filter((cell) => cell.symbol === symbol).length;
+    }
+    function rerollPlantCells(board, rng, predicate) {
+      for (let reel = 0; reel < types_js_1.REELS; reel += 1) {
+        for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
+          if (predicate(board[reel][row].symbol)) {
+            board[reel][row] = { symbol: rng.pickWeighted(plantLayerWeights) };
+          }
+        }
+      }
+    }
+  }
+});
+
+// dist/math/symbols.js
+var require_symbols = __commonJS({
+  "dist/math/symbols.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.SYMBOLS = void 0;
+    exports2.getSymbol = getSymbol;
+    exports2.SYMBOLS = {
+      EMPTY: { id: "EMPTY", kind: "empty" },
+      BONUS: { id: "BONUS", kind: "bonus", isBonus: true },
+      NUT: { id: "NUT", kind: "utility", isReload: true },
+      PEASHOOTER_1: {
+        id: "PEASHOOTER_1",
+        kind: "plant",
+        damage: 2,
+        featureUpgradeTo: "MUSHROOM_1"
+      },
+      PEASHOOTER_2: {
+        id: "PEASHOOTER_2",
+        kind: "plant",
+        damage: 4,
+        featureUpgradeTo: "MUSHROOM_2"
+      },
+      PEASHOOTER_3: {
+        id: "PEASHOOTER_3",
+        kind: "plant",
+        damage: 8,
+        featureUpgradeTo: "MUSHROOM_3"
+      },
+      WATERMELON: {
+        id: "WATERMELON",
+        kind: "plant",
+        damage: 12,
+        featureUpgradeTo: "MUSHROOM_3"
+      },
+      CHERRY: { id: "CHERRY", kind: "plant", damage: 16 },
+      SQUASH: { id: "SQUASH", kind: "plant", damage: 6 },
+      DOOM_SHROOM: {
+        id: "DOOM_SHROOM",
+        kind: "utility",
+        isInstantKill: true
+      },
+      CHILI: {
+        id: "CHILI",
+        kind: "utility",
+        isPlantReset: true
+      },
+      MUSHROOM_1: { id: "MUSHROOM_1", kind: "plant", damage: 3 },
+      MUSHROOM_2: { id: "MUSHROOM_2", kind: "plant", damage: 6 },
+      MUSHROOM_3: { id: "MUSHROOM_3", kind: "plant", damage: 10 },
+      ZOMBIE_15: { id: "ZOMBIE_15", kind: "zombie", multiplier: 15 },
+      ZOMBIE_20: { id: "ZOMBIE_20", kind: "zombie", multiplier: 20 },
+      ZOMBIE_50: { id: "ZOMBIE_50", kind: "zombie", multiplier: 50 }
+    };
+    function getSymbol(id) {
+      return exports2.SYMBOLS[id];
+    }
+  }
+});
+
+// dist/math/config.js
+var require_config = __commonJS({
+  "dist/math/config.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.FIVE_OF_A_KIND_PAYTABLE = exports2.ALLOWED_BETS_PESOS = exports2.ALLOWED_BETS_CENTAVOS = exports2.CENTAVOS_PER_PESO = exports2.MAX_WIN_MULTIPLIER = exports2.DEFAULT_RTP = exports2.BONUS_BUY_COST_MULTIPLIER = exports2.BONUS_BUY_FREE_SPINS = exports2.BONUS_TRIGGER_COUNT = void 0;
+    exports2.validateBaseBet = validateBaseBet;
+    exports2.BONUS_TRIGGER_COUNT = 3;
+    exports2.BONUS_BUY_FREE_SPINS = 10;
+    exports2.BONUS_BUY_COST_MULTIPLIER = 100;
+    exports2.DEFAULT_RTP = 0.96;
+    exports2.MAX_WIN_MULTIPLIER = 5e3;
+    exports2.CENTAVOS_PER_PESO = 100;
+    exports2.ALLOWED_BETS_CENTAVOS = [50, 100, 300, 500, 1e3, 1500, 2e3, 5e3, 7500, 1e4];
+    exports2.ALLOWED_BETS_PESOS = exports2.ALLOWED_BETS_CENTAVOS.map((bet) => bet / exports2.CENTAVOS_PER_PESO);
+    exports2.FIVE_OF_A_KIND_PAYTABLE = {
+      BONUS: 100,
+      DOOM_SHROOM: 75,
+      CHILI: 50,
+      CHERRY: 40,
+      WATERMELON: 30,
+      SQUASH: 20,
+      PEASHOOTER_3: 15,
+      MUSHROOM_3: 15,
+      PEASHOOTER_2: 10,
+      MUSHROOM_2: 10,
+      PEASHOOTER_1: 5,
+      MUSHROOM_1: 5,
+      NUT: 3
+    };
+    function validateBaseBet(baseBet) {
+      if (!Number.isSafeInteger(baseBet) || baseBet <= 0) {
+        throw new RangeError("baseBet must be a positive integer in centavos.");
+      }
+      if (!exports2.ALLOWED_BETS_CENTAVOS.includes(baseBet)) {
+        throw new RangeError(`baseBet must be one of the allowed peso bets: ${exports2.ALLOWED_BETS_PESOS.join(", ")}.`);
+      }
+    }
+  }
+});
+
+// dist/math/battle.js
+var require_battle = __commonJS({
+  "dist/math/battle.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.playBattleFeature = playBattleFeature;
+    var config_js_12 = require_config();
+    var BATTLE_REELS = 3;
+    var BOSS_INTERVAL = 4;
+    var battleSymbolWeights = [
+      { value: "MISS", weight: 82 },
+      { value: "DAGGER", weight: 7 },
+      { value: "KNIFE", weight: 5 },
+      { value: "SWORD", weight: 3 },
+      { value: "AXE", weight: 1 },
+      { value: "CHEST", weight: 2 }
+    ];
+    var battleSymbols = {
+      MISS: { id: "MISS", hits: 0, respinsAwarded: 0 },
+      DAGGER: { id: "DAGGER", hits: 1, respinsAwarded: 1 },
+      KNIFE: { id: "KNIFE", hits: 2, respinsAwarded: 1 },
+      SWORD: { id: "SWORD", hits: 3, respinsAwarded: 1 },
+      AXE: { id: "AXE", hits: 4, respinsAwarded: 1 },
+      CHEST: { id: "CHEST", hits: 0, respinsAwarded: 1, chestMultiplier: 2 }
+    };
+    var levelUpAwards = [
+      "weapon_upgrade",
+      "chest_upgrade",
+      "sticky_multiplier",
+      "boss_chest_bonus",
+      "opening_strike",
+      "extra_battle_spin"
+    ];
+    function playBattleFeature(baseBet, rng, startingSpins = 5) {
+      (0, config_js_12.validateBaseBet)(baseBet);
+      let spinsRemaining = startingSpins;
+      let spinNumber = 0;
+      let respinsAwarded = 0;
+      let monstersDefeated = 0;
+      let bossesDefeated = 0;
+      let chestMultiplier = 0;
+      let battleMultiplier = 0;
+      const levelUps = [];
+      const steps = [];
+      let monster = createMonster(1);
+      while (spinsRemaining > 0) {
+        spinsRemaining -= 1;
+        spinNumber += 1;
+        const symbols = drawBattleSymbols(rng);
+        const nonMissSymbols = symbols.filter((symbol) => symbol !== "MISS").length;
+        const bonusRespins = nonMissSymbols === BATTLE_REELS ? 5 : 0;
+        const symbolRespins = symbols.reduce((sum, symbol) => sum + battleSymbols[symbol].respinsAwarded, 0);
+        const awardedThisSpin = symbolRespins + bonusRespins;
+        respinsAwarded += awardedThisSpin;
+        spinsRemaining += awardedThisSpin;
+        let hitsApplied = 0;
+        let criticalHits = 0;
+        let chestWonThisSpin = 0;
+        const monsterBefore = cloneMonster(monster);
+        for (const symbol of symbols) {
+          const battleSymbol = battleSymbols[symbol];
+          if (battleSymbol.chestMultiplier) {
+            const upgradedChest = battleSymbol.chestMultiplier + levelUps.filter((award) => award === "chest_upgrade").length;
+            chestWonThisSpin += upgradedChest;
+            continue;
+          }
+          const upgradedHits = battleSymbol.hits + levelUps.filter((award) => award === "weapon_upgrade").length;
+          const isCritical = upgradedHits > 0 && rng.next() < 0.1;
+          const hitValue = isCritical ? Math.max(upgradedHits, 3) : upgradedHits;
+          const applied = Math.min(monster.remainingHealth, hitValue);
+          monster.remainingHealth -= applied;
+          hitsApplied += applied;
+          if (isCritical) {
+            criticalHits += 1;
+          }
+          if (monster.remainingHealth === 0) {
+            break;
+          }
+        }
+        let defeatedMonster;
+        let levelUpAwarded;
+        if (monster.remainingHealth === 0) {
+          defeatedMonster = cloneMonster(monster);
+          monstersDefeated += 1;
+          chestWonThisSpin += monster.isBoss ? 10 * monster.level : 2 * monster.level;
+          if (monster.isBoss) {
+            bossesDefeated += 1;
+            levelUpAwarded = levelUpAwards[levelUps.length % levelUpAwards.length];
+            levelUps.push(levelUpAwarded);
+            if (levelUpAwarded === "sticky_multiplier") {
+              battleMultiplier += 5;
+            }
+            if (levelUpAwarded === "extra_battle_spin") {
+              spinsRemaining += 1;
+              respinsAwarded += 1;
+            }
+          }
+          monster = createMonster(monster.index + 1);
+          if (levelUpAwarded === "opening_strike") {
+            const openingStrike = Math.min(monster.remainingHealth, 2);
+            monster.remainingHealth -= openingStrike;
+            hitsApplied += openingStrike;
+          }
+        }
+        chestMultiplier += chestWonThisSpin;
+        battleMultiplier += chestWonThisSpin;
+        steps.push({
+          spinNumber,
+          symbols,
+          hitsApplied,
+          criticalHits,
+          respinsAwarded: awardedThisSpin,
+          chestMultiplier: chestWonThisSpin,
+          monsterBefore,
+          monsterAfter: cloneMonster(monster),
+          defeatedMonster,
+          levelUpAwarded
+        });
+      }
+      return {
+        baseBet,
+        startingSpins,
+        spinsPlayed: spinNumber,
+        respinsAwarded,
+        monstersDefeated,
+        bossesDefeated,
+        levelUps,
+        chestMultiplier,
+        battleMultiplier,
+        payout: battleMultiplier * baseBet,
+        steps
+      };
+    }
+    function drawBattleSymbols(rng) {
+      return Array.from({ length: BATTLE_REELS }, () => rng.pickWeighted(battleSymbolWeights));
+    }
+    function createMonster(index) {
+      const level = Math.min(4, Math.ceil(index / BOSS_INTERVAL));
+      const isBoss = index % BOSS_INTERVAL === 0;
+      const startingHealth = isBoss ? level + 5 : level + 2;
+      return {
+        index,
+        level,
+        isBoss,
+        startingHealth,
+        remainingHealth: startingHealth
+      };
+    }
+    function cloneMonster(monster) {
+      return { ...monster };
+    }
+  }
+});
+
+// dist/math/engine.js
+var require_engine = __commonJS({
+  "dist/math/engine.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.spin = spin;
+    exports2.resolveLineWins = resolveLineWins;
+    exports2.buyBonus = buyBonus;
+    var reels_js_1 = require_reels();
+    var types_js_1 = require_types();
+    var symbols_js_1 = require_symbols();
+    var config_js_12 = require_config();
+    var battle_js_1 = require_battle();
+    function spin(input, rng) {
+      (0, config_js_12.validateBaseBet)(input.baseBet);
+      const events = [];
+      const board = (0, reels_js_1.drawBoard)(rng);
+      events.push({ type: "board_drawn", message: "Initial 5x5 board drawn." });
+      const bonusCount = (0, reels_js_1.countSymbols)(board, "BONUS");
+      const featureTriggered = input.mode === "bonus" || bonusCount >= config_js_12.BONUS_TRIGGER_COUNT;
+      const darkMode = featureTriggered;
+      if (featureTriggered) {
+        events.push({
+          type: "bonus_triggered",
+          message: "Dark mode triggered; plant icons upgrade into mushrooms."
+        });
+        upgradePlantsToMushrooms(board);
+        (0, reels_js_1.rerollPlantCells)(board, rng, (symbol) => symbol === "EMPTY" || symbol === "PEASHOOTER_1");
+        events.push({
+          type: "dark_mode_upgrade",
+          message: "Plant layer upgraded and rerolled for feature resolution."
+        });
+      }
+      if (hasSymbol(board, "CHILI")) {
+        (0, reels_js_1.rerollPlantCells)(board, rng, () => true);
+        events.push({
+          type: "plant_reset",
+          message: "Chili reset the plant board before attacks resolved."
+        });
+      }
+      const reloads = (0, reels_js_1.countSymbols)(board, "NUT");
+      for (let reload = 0; reload < reloads; reload += 1) {
+        (0, reels_js_1.rerollPlantCells)(board, rng, (symbol) => symbol === "EMPTY" || symbol === "PEASHOOTER_1");
+      }
+      if (reloads > 0) {
+        events.push({
+          type: "reload",
+          message: `${reloads} nut reload(s) improved weak plant cells.`
+        });
+      }
+      const lineWins = resolveLineWins(board, input.baseBet);
+      const lineWinMultiplier = lineWins.reduce((sum, win) => sum + win.multiplier, 0);
+      if (lineWins.length > 0) {
+        events.push({
+          type: "line_win",
+          message: `${lineWins.length} lane(s) hit 5 matching icons for ${lineWinMultiplier}x.`
+        });
+      }
+      const instantKill = hasSymbol(board, "DOOM_SHROOM");
+      if (instantKill) {
+        events.push({
+          type: "instant_kill",
+          message: "Doom shroom defeated all zombies on the board."
+        });
+      }
+      const zombieHits = resolveZombies(board, instantKill);
+      const zombieWinMultiplier = zombieHits.filter((hit) => hit.defeated).reduce((sum, hit) => sum + hit.multiplier, 0);
+      const totalMultiplier = lineWinMultiplier + zombieWinMultiplier;
+      const payout = totalMultiplier * input.baseBet;
+      events.push({
+        type: "zombie_resolved",
+        message: `${zombieHits.filter((hit) => hit.defeated).length} zombie(s) defeated for ${zombieWinMultiplier}x.`
+      });
+      return {
+        input,
+        board,
+        featureTriggered,
+        darkMode,
+        bonusCount,
+        reloads,
+        lineWins,
+        lineWinMultiplier,
+        zombieWinMultiplier,
+        zombieHits,
+        totalMultiplier,
+        payout,
+        events
+      };
+    }
+    function resolveLineWins(board, baseBet) {
+      (0, config_js_12.validateBaseBet)(baseBet);
+      const lineWins = [];
+      for (let row = 0; row < types_js_1.ROWS; row += 1) {
+        const firstSymbol = board[0][row].symbol;
+        const multiplier = config_js_12.FIVE_OF_A_KIND_PAYTABLE[firstSymbol] ?? 0;
+        if (multiplier === 0) {
+          continue;
+        }
+        const isFiveOfAKind = board.every((reel) => reel[row].symbol === firstSymbol);
+        if (!isFiveOfAKind) {
+          continue;
+        }
+        lineWins.push({
+          row,
+          symbol: firstSymbol,
+          count: types_js_1.REELS,
+          multiplier,
+          payout: multiplier * baseBet
+        });
+      }
+      return lineWins;
+    }
+    function buyBonus(input, rng) {
+      (0, config_js_12.validateBaseBet)(input.baseBet);
+      const cost = input.baseBet * config_js_12.BONUS_BUY_COST_MULTIPLIER;
+      const events = [
+        {
+          type: "bonus_buy_purchased",
+          message: `Bonus bought for ${config_js_12.BONUS_BUY_COST_MULTIPLIER}x bet.`
+        },
+        {
+          type: "free_spin_awarded",
+          message: `${config_js_12.BONUS_BUY_FREE_SPINS} free spins awarded.`
+        }
+      ];
+      const spins = [];
+      const battleFeatures = [];
+      for (let spinIndex = 1; spinIndex <= config_js_12.BONUS_BUY_FREE_SPINS; spinIndex += 1) {
+        spins.push(spin({
+          baseBet: input.baseBet,
+          mode: "bonus",
+          source: "bonus_buy",
+          freeSpinIndex: spinIndex,
+          freeSpinsTotal: config_js_12.BONUS_BUY_FREE_SPINS
+        }, rng));
+        battleFeatures.push((0, battle_js_1.playBattleFeature)(input.baseBet, rng));
+      }
+      const spinMultiplier = spins.reduce((sum, result) => sum + result.totalMultiplier, 0);
+      const battleMultiplier = battleFeatures.reduce((sum, result) => sum + result.battleMultiplier, 0);
+      const totalMultiplier = spinMultiplier + battleMultiplier;
+      const totalPayout = spins.reduce((sum, result) => sum + result.payout, 0) + battleFeatures.reduce((sum, result) => sum + result.payout, 0);
+      return {
+        type: "bonus_buy",
+        baseBet: input.baseBet,
+        cost,
+        freeSpinsAwarded: config_js_12.BONUS_BUY_FREE_SPINS,
+        spins,
+        battleFeatures,
+        totalMultiplier,
+        totalPayout,
+        netOutcome: totalPayout - cost,
+        events
+      };
+    }
+    function upgradePlantsToMushrooms(board) {
+      for (const reel of board) {
+        for (const cell of reel) {
+          const upgradeTo = (0, symbols_js_1.getSymbol)(cell.symbol).featureUpgradeTo;
+          if (upgradeTo) {
+            cell.symbol = upgradeTo;
+          }
+        }
+      }
+    }
+    function hasSymbol(board, symbol) {
+      return board.some((reel) => reel.some((cell) => cell.symbol === symbol));
+    }
+    function resolveZombies(board, instantKill) {
+      const hits = [];
+      for (let reel = 0; reel < types_js_1.REELS; reel += 1) {
+        for (let row = types_js_1.PLANT_ROWS; row < types_js_1.ROWS; row += 1) {
+          const zombie = (0, symbols_js_1.getSymbol)(board[reel][row].symbol);
+          if (zombie.kind !== "zombie") {
+            continue;
+          }
+          const multiplier = zombie.multiplier ?? 0;
+          const damageTaken = instantKill ? multiplier : laneDamage(board, reel);
+          hits.push({
+            position: { reel, row },
+            symbol: zombie.id,
+            multiplier,
+            damageTaken,
+            defeated: instantKill || damageTaken >= multiplier
+          });
+        }
+      }
+      return hits;
+    }
+    function laneDamage(board, reel) {
+      let damage = 0;
+      for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
+        damage += (0, symbols_js_1.getSymbol)(board[reel][row].symbol).damage ?? 0;
+      }
+      const leftSplash = reel > 0 ? splashDamage(board, reel - 1) : 0;
+      const rightSplash = reel < types_js_1.REELS - 1 ? splashDamage(board, reel + 1) : 0;
+      return damage + leftSplash + rightSplash;
+    }
+    function splashDamage(board, reel) {
+      let damage = 0;
+      for (let row = 0; row < types_js_1.PLANT_ROWS; row += 1) {
+        const symbol = board[reel][row].symbol;
+        if (symbol === "WATERMELON" || symbol === "CHERRY") {
+          damage += Math.floor(((0, symbols_js_1.getSymbol)(symbol).damage ?? 0) / 2);
+        }
+      }
+      return damage;
+    }
+  }
+});
+
+// dist/stake-game.js
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.game = exports.gameModes = exports.userState = exports.symbols = void 0;
+var core_1 = require_dist();
+var engine_js_1 = require_engine();
+var config_js_1 = require_config();
+var rootDir = process.cwd();
+var SIMULATION_BET_CENTAVOS = 100;
+function makeSlotEngineRngAdapter(randomFloat) {
+  return {
+    next: () => randomFloat(0, 1),
+    pickWeighted(items) {
+      const total = items.reduce((sum, item) => sum + item.weight, 0);
+      let roll = randomFloat(0, total);
+      for (const item of items) {
+        roll -= item.weight;
+        if (roll <= 0) {
+          return item.value;
+        }
+      }
+      return items[items.length - 1].value;
+    }
+  };
+}
+exports.symbols = (0, core_1.defineSymbols)({
+  B: new core_1.GameSymbol({ id: "B", properties: { isScatter: true, role: "bonus" } }),
+  N: new core_1.GameSymbol({ id: "N", properties: { role: "reload" } }),
+  P1: new core_1.GameSymbol({ id: "P1", properties: { role: "plant", damage: 2 } }),
+  P2: new core_1.GameSymbol({ id: "P2", properties: { role: "plant", damage: 4 } }),
+  P3: new core_1.GameSymbol({ id: "P3", properties: { role: "plant", damage: 8 } }),
+  W: new core_1.GameSymbol({ id: "W", properties: { role: "plant", damage: 12 } }),
+  C: new core_1.GameSymbol({ id: "C", properties: { role: "plant", damage: 16 } }),
+  S: new core_1.GameSymbol({ id: "S", properties: { role: "plant", damage: 6 } }),
+  D: new core_1.GameSymbol({ id: "D", properties: { role: "instantKill" } }),
+  CH: new core_1.GameSymbol({ id: "CH", properties: { role: "plantReset" } }),
+  Z15: new core_1.GameSymbol({ id: "Z15", properties: { role: "zombie", multiplier: 15 } }),
+  Z20: new core_1.GameSymbol({ id: "Z20", properties: { role: "zombie", multiplier: 20 } }),
+  Z50: new core_1.GameSymbol({ id: "Z50", properties: { role: "zombie", multiplier: 50 } })
+});
+exports.userState = (0, core_1.defineUserState)({
+  lastTotalMultiplier: 0,
+  lastFeatureTriggered: false,
+  lastReloads: 0,
+  lastFreeSpinsAwarded: 0,
+  lastRoundType: "base"
+});
+var sdkSymbolWeights = {
+  B: 5,
+  N: 8,
+  P1: 24,
+  P2: 16,
+  P3: 10,
+  W: 6,
+  C: 4,
+  S: 5,
+  D: 1,
+  CH: 1,
+  Z15: 28,
+  Z20: 14,
+  Z50: 4
+};
+function makeReelSet(id) {
+  return new core_1.GeneratedReelSet({
+    id,
+    symbolWeights: sdkSymbolWeights,
+    rowsAmount: 80,
+    seed: 20260518
+  });
+}
+function makeAnyResultSet(reelSetId) {
+  return new core_1.ResultSet({
+    criteria: "any",
+    quota: 1,
+    reelWeights: {
+      [core_1.SPIN_TYPE.BASE_GAME]: { [reelSetId]: 1 },
+      [core_1.SPIN_TYPE.FREE_SPINS]: { [reelSetId]: 1 }
+    }
+  });
+}
+exports.gameModes = (0, core_1.defineGameModes)({
+  base: new core_1.GameMode({
+    name: "base",
+    cost: 1,
+    rtp: config_js_1.DEFAULT_RTP,
+    reelsAmount: 5,
+    symbolsPerReel: [5, 5, 5, 5, 5],
+    isBonusBuy: false,
+    reelSets: [makeReelSet("base-main")],
+    resultSets: [makeAnyResultSet("base-main")]
+  }),
+  bonus: new core_1.GameMode({
+    name: "bonus",
+    cost: config_js_1.BONUS_BUY_COST_MULTIPLIER,
+    rtp: config_js_1.DEFAULT_RTP,
+    reelsAmount: 5,
+    symbolsPerReel: [5, 5, 5, 5, 5],
+    isBonusBuy: true,
+    reelSets: [makeReelSet("bonus-main")],
+    resultSets: [makeAnyResultSet("bonus-main")]
+  })
+});
+exports.game = (0, core_1.createSlotGame)({
+  id: "pvz-slot-framework",
+  name: "PvZ Slot Framework",
+  rootDir,
+  maxWinX: config_js_1.MAX_WIN_MULTIPLIER,
+  scatterToFreespins: {},
+  gameModes: exports.gameModes,
+  symbols: exports.symbols,
+  userState: exports.userState,
+  hooks: {
+    onHandleGameFlow(ctx) {
+      const mode = ctx.state.currentGameMode === "bonus" ? "bonus" : "base";
+      const rng = makeSlotEngineRngAdapter(ctx.services.rng.randomFloat);
+      if (mode === "bonus") {
+        const bonusResult = (0, engine_js_1.buyBonus)({ baseBet: SIMULATION_BET_CENTAVOS }, rng);
+        ctx.state.userData.lastTotalMultiplier = bonusResult.totalMultiplier;
+        ctx.state.userData.lastFeatureTriggered = true;
+        ctx.state.userData.lastReloads = bonusResult.spins.reduce((sum, result2) => sum + result2.reloads, 0);
+        ctx.state.userData.lastFreeSpinsAwarded = bonusResult.freeSpinsAwarded;
+        ctx.state.userData.lastRoundType = "bonus_buy";
+        ctx.services.data.record({
+          roundType: bonusResult.type,
+          cost: bonusResult.cost,
+          freeSpinsAwarded: bonusResult.freeSpinsAwarded,
+          battleFeatures: bonusResult.battleFeatures.length,
+          battleMonstersDefeated: bonusResult.battleFeatures.reduce((sum, result2) => sum + result2.monstersDefeated, 0),
+          battleBossesDefeated: bonusResult.battleFeatures.reduce((sum, result2) => sum + result2.bossesDefeated, 0),
+          battleMultiplier: bonusResult.battleFeatures.reduce((sum, result2) => sum + result2.battleMultiplier, 0),
+          totalMultiplier: bonusResult.totalMultiplier,
+          totalPayout: bonusResult.totalPayout,
+          netOutcome: bonusResult.netOutcome
+        });
+        for (const result2 of bonusResult.spins) {
+          ctx.services.data.record({
+            roundType: "bonus_buy_free_spin",
+            freeSpinIndex: result2.input.freeSpinIndex ?? 0,
+            freeSpinsTotal: result2.input.freeSpinsTotal ?? config_js_1.BONUS_BUY_FREE_SPINS,
+            bonusCount: result2.bonusCount,
+            reloads: result2.reloads,
+            lineWins: result2.lineWins.length,
+            lineWinMultiplier: result2.lineWinMultiplier,
+            zombieWinMultiplier: result2.zombieWinMultiplier,
+            defeatedZombies: result2.zombieHits.filter((hit) => hit.defeated).length,
+            totalMultiplier: result2.totalMultiplier,
+            payout: result2.payout
+          });
+        }
+        ctx.services.wallet.addSpinWin(bonusResult.totalMultiplier);
+        ctx.services.wallet.confirmSpinWin();
+        return;
+      }
+      const result = (0, engine_js_1.spin)({ baseBet: SIMULATION_BET_CENTAVOS, mode, source: "paid_spin" }, rng);
+      ctx.state.userData.lastTotalMultiplier = result.totalMultiplier;
+      ctx.state.userData.lastFeatureTriggered = result.featureTriggered;
+      ctx.state.userData.lastReloads = result.reloads;
+      ctx.state.userData.lastFreeSpinsAwarded = 0;
+      ctx.state.userData.lastRoundType = "base";
+      ctx.services.data.record({
+        featureTriggered: result.featureTriggered,
+        bonusCount: result.bonusCount,
+        reloads: result.reloads,
+        lineWins: result.lineWins.length,
+        lineWinMultiplier: result.lineWinMultiplier,
+        zombieWinMultiplier: result.zombieWinMultiplier,
+        defeatedZombies: result.zombieHits.filter((hit) => hit.defeated).length,
+        totalMultiplier: result.totalMultiplier,
+        payout: result.payout
+      });
+      ctx.services.wallet.addSpinWin(result.totalMultiplier);
+      ctx.services.wallet.confirmSpinWin();
+    }
+  }
+});
+exports.game.configureSimulation({
+  simRunsAmount: {
+    base: 1e3,
+    bonus: 1e3
+  },
+  concurrency: 4
+});
+exports.game.runTasks({
+  doSimulation: true
+});
